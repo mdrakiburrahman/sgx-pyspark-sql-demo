@@ -12,7 +12,9 @@ if __name__ == "__main__":
         .appName("Azure SQL application") \
         .getOrCreate()
 
-    df = spark.read.csv("input/data/dbo-Employees.csv")
+    df = spark.read.option("header",True) \
+                   .option("inferSchema",True) \
+                   .csv("input/data/dbo-Employees.csv")
 
     df.show()
 
