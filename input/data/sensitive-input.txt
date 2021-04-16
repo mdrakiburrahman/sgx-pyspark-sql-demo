@@ -1,0 +1,5 @@
+SCONE is a platform to build and run secure applications with the help of Intel SGX.
+In a nutshell, our objective is to run applications such that data is always encrypted, i.e., all data at rest, all data on the wire as well as all data in main memory is encrypted.
+Even the program code can be encrypted. SCONE helps to protect data, computations and code against attackers with root access.
+Using SCONE is awesome since applications do not need to be redeveloped to run with Intel SGX.
+To access our system, you can use the username is TUD and password is Karate.
