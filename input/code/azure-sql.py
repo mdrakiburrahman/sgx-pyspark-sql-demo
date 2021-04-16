@@ -12,10 +12,20 @@ if __name__ == "__main__":
         .appName("Azure SQL application") \
         .getOrCreate()
 
+    # Loading data from a CSV source
     df = spark.read.option("header",True) \
                    .option("inferSchema",True) \
                    .csv("input/data/dbo-Employees.csv")
 
     df.show()
+
+    # Loading data from a JDBC source
+    jdbcDF = spark.read \
+        .format("jdbc") \
+        .option("url", "") \
+        .option("table", "SELECT TOP (10) * FROM dbo.Employees") \
+        .load()
+
+    jdbcDF.show()
 
     spark.stop()
