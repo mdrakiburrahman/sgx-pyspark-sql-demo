@@ -23,7 +23,7 @@ if __name__ == "__main__":
     jdbcDF = spark.read \
         .format("jdbc") \
         .option("url", "") \
-        .option("table", "SELECT TOP (10) * FROM dbo.Employees") \
+        .option("dbtable", "dbo.Employees") \
         .load()
 
     jdbcDF.show()
