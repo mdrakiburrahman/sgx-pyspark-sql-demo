@@ -12,20 +12,24 @@ if __name__ == "__main__":
         .appName("Azure SQL application") \
         .getOrCreate()
 
-    # Loading data from a CSV source
-    df = spark.read.option("header",True) \
-                   .option("inferSchema",True) \
-                   .csv("input/data/dbo-Employees.csv")
-
-    df.show()
-
-    # Loading data from a JDBC source
-    jdbcDF = spark.read \
+    # Loading encrypted columns - no CMK required
+    UnencryptedDF = spark.read \
         .format("jdbc") \
         .option("url", "") \
         .option("dbtable", "dbo.Employees") \
         .load()
 
-    jdbcDF.show()
+    EncryptedDF.limit(10) \
+               .show()
+
+    # Loading unencrypted columns - with CMK
+    UnencryptedDF = spark.read \
+        .format("jdbc") \
+        .option("url", "") \
+        .option("dbtable", "dbo.Employees") \
+        .load()
+
+    UnencryptedDF.limit(10) \
+                 .show()
 
     spark.stop()
