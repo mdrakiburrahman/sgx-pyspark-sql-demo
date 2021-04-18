@@ -21,7 +21,7 @@ def print_memory_of_pid(pid, only_writable=True):
                     sys.stderr.write( "start = " + str(start) + "\n")
                     mem_file.seek(start)  # seek to region start
                     chunk = mem_file.read(end - start)  # read region contents
-                    print chunk,  # dump contents to standard output
+                    print(chunk)  # dump contents to standard output
                 else:
                     sys.stderr.write("\nPASS : \n" + line+"\n")
 
@@ -31,7 +31,7 @@ if __name__ == '__main__': # Execute this code when run from the commandline.
         pid = int(sys.argv[1])
         print_memory_of_pid(pid)
     except (AssertionError, ValueError) as e:
-        print "Please provide 1 PID as a commandline argument."
-        print "You entered: %s" % ' '.join(sys.argv)
+        print("Please provide 1 PID as a commandline argument.")
+        print("You entered: %s" % ' '.join(sys.argv))
         raise e
 
