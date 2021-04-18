@@ -21,7 +21,7 @@ pid=`ps|grep python|awk -F " " '{print $1}'`
 /usr/bin/python dump-memory.py $pid  &> content-memory.txt
 
 # Extract secret in the memory
-result=`cat content-memory.txt | grep "Alexander" | awk -F "." '{print $1}'`
+result=`cat content-memory.txt | grep "Alexander"
 
 # Add result to a log file
 if [ -z "$result" ]; then 
