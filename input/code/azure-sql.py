@@ -13,7 +13,7 @@ if __name__ == "__main__":
         .getOrCreate()
 
     # Loading encrypted columns - no CMK required
-    UnencryptedDF = spark.read \
+    EncryptedDF = spark.read \
         .format("jdbc") \
         .option("url", "") \
         .option("dbtable", "dbo.Employees") \
