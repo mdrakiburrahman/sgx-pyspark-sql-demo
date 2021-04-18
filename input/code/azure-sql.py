@@ -32,4 +32,9 @@ if __name__ == "__main__":
     UnencryptedDF.limit(10) \
                  .show()
 
+    # Generate delay to allow window for memory attack
+    print("###########################################")
+    print("################ SLEEP 10 #################")
+    print("###########################################")
+
     spark.stop()
