@@ -22,9 +22,6 @@ def print_memory_of_pid(pid, only_writable=True):
                         sys.stderr.write( "start = " + str(start) + "\n")
                         mem_file.seek(start)  # seek to region start
                         chunk = mem_file.read(end - start)  # read region contents
-                        print("-------------------")
-                        print("Memory scan results")
-                        print("-------------------")
                         print(chunk)  # dump contents to standard output
                     else:
                         sys.stderr.write("\nPASS : \n" + line+"\n")
