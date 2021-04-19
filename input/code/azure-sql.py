@@ -12,24 +12,14 @@ if __name__ == "__main__":
         .appName("Azure SQL application") \
         .getOrCreate()
 
-    # Loading encrypted columns - no CMK required
-    EncryptedDF = spark.read \
+    # Loading Dataframe from Azure SQL
+    AzureSQL_DF = spark.read \
         .format("jdbc") \
         .option("url", "") \
         .option("dbtable", "dbo.Employees") \
         .load()
 
-    EncryptedDF.limit(10) \
-               .show()
-
-    # Loading unencrypted columns - with CMK
-    UnencryptedDF = spark.read \
-        .format("jdbc") \
-        .option("url", "") \
-        .option("dbtable", "dbo.Employees") \
-        .load()
-
-    UnencryptedDF.limit(10) \
+    AzureSQL_DF.limit(10) \
                  .show()
 
     # Generate delay to allow window for memory attack

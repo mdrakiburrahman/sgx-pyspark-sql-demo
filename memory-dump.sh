@@ -17,6 +17,11 @@ echo "" > log-memory.txt
 # Get PID of python process
 pid=`ps|grep python|awk -F " " '{print $1}'`
 
+echo "The PySpark application PID is: " $pid
+echo "---------------------------------"
+echo "Attempting memory dump:"
+echo "---------------------------------"
+
 # Dump the  memory of the python process
 /usr/bin/python dump-memory.py $pid  &> content-memory.txt
 
