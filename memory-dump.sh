@@ -21,7 +21,7 @@ echo "The PySpark application PID is: " $pid
 echo "#######################"
 echo "Attempting memory dump:"
 echo "#######################"
-echo "\n"
+echo $'\n'
 
 # Dump the  memory of the python process
 /usr/bin/python dump-memory.py $pid  &> content-memory.txt
