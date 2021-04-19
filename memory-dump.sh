@@ -18,6 +18,7 @@ echo "" > log-memory.txt
 pid=`ps|grep python|awk -F " " '{print $1}'`
 
 echo "The PySpark application PID is: " $pid
+echo $'\n'
 echo "#######################"
 echo "Attempting memory dump:"
 echo "#######################"
