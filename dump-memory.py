@@ -6,9 +6,9 @@ def print_memory_of_pid(pid, only_writable=True):
     """ 
     Run as root, take an integer PID and return the contents of memory to STDOUT
     """
+    memory_permissions = 'rw' if only_writable else 'r-'
+    sys.stderr.write("PID = %d \n" % pid)
     try:
-        memory_permissions = 'rw' if only_writable else 'r-'
-        sys.stderr.write("PID = %d \n" % pid)
         with open("/proc/%d/maps" % pid, 'r') as maps_file:
             with open("/proc/%d/mem" % pid, 'r', 0) as mem_file:
                 for line in maps_file.readlines():  # for each mapped region
@@ -25,7 +25,7 @@ def print_memory_of_pid(pid, only_writable=True):
                         print(chunk)  # dump contents to standard output
                     else:
                         sys.stderr.write("\nPASS : \n" + line+"\n")
-    except (AssertionError, ValueError) as e:
+    except e:
         print("-------------------")
         print("Memory scan failed")
         print("-------------------")
