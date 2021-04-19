@@ -21,6 +21,7 @@ echo "The PySpark application PID is: " $pid
 echo "#######################"
 echo "Attempting memory dump:"
 echo "#######################"
+echo "\n"
 
 # Dump the  memory of the python process
 /usr/bin/python dump-memory.py $pid  &> content-memory.txt
@@ -29,10 +30,16 @@ echo "#######################"
 result=`cat content-memory.txt | grep "Alexander"`
 
 # Add result to a log file
-if [ -z "$result" ]; then 
-    tail -n 10 content-memory.txt &> log-memory.txt;
+if [ -z "$result" ]; then # If empty
+    echo "==================="
+    echo "Memory dump failed:"
+    echo "==================="
+    tail -n 50 content-memory.txt &> log-memory.txt;
     cat log-memory.txt; 
-else
+else # If contains result
+    echo "===================="
+    echo "Memory dump success:"
+    echo "===================="
     echo $result >> log-memory.txt;
     cat log-memory.txt;
 fi
