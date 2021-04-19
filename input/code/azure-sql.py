@@ -22,10 +22,12 @@ if __name__ == "__main__":
     AzureSQL_DF.limit(10) \
                  .show()
 
+    spark.stop()
+
     # Generate delay to allow window for memory attack
+    print("###########################################")
+    print("#### Generate window for Memory Attack ####")
     print("###########################################")
     print("################ SLEEP 10 #################")
     print("###########################################")
     time.sleep(10)
-
-    spark.stop()

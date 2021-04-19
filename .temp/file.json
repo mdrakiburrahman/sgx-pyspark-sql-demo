@@ -5,8 +5,8 @@
   },
   "inputs": [
     {
-      "source": "server1",
-      "stream": "app1",
+      "source": "SCONE-PySpark",
+      "stream": "spark",
       "config": {
         "path": "/fspf/output.txt"
       }
