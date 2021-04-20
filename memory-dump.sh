@@ -9,8 +9,6 @@
 #
 # Copyright (C) 2019 Scontain UG
 
-
-
 # Clean log file
 echo "" > log-memory.txt
 

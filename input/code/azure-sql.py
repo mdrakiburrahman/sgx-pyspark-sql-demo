@@ -15,7 +15,7 @@ if __name__ == "__main__":
     # Loading Dataframe from Azure SQL
     AzureSQL_DF = spark.read \
         .format("jdbc") \
-        .option("url", "") \
+        .option("url", "jdbc:sqlserver:...") \
         .option("dbtable", "dbo.Employees") \
         .load()
 
