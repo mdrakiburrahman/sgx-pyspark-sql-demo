@@ -14,9 +14,6 @@ if __name__ == "__main__":
         .appName("Azure SQL application") \
         .getOrCreate()
 
-    # Artificial lag for log.io in browser to catch up
-    time.sleep(5)
-
     # Loading Dataframe from Azure SQL
     AzureSQL_DF = spark.read \
         .format("jdbc") \
