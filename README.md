@@ -28,7 +28,7 @@ Demonstrate how to run **end-to-end Confidential Analytics** on Azure (presumabl
 
 ### Pre-requisites
 
-1. Access to SCONE's Spark image:
+1. Registry for access to the 2 Spark images used per scenario:
    - `#TODO`
 2. Follow the tutorial here to deploy an Azure SQL Always Encrypted with Secure Enclaves Database with some sample PII data: [link](https://docs.microsoft.com/en-us/azure/azure-sql/database/always-encrypted-enclaves-getting-started)
 3. A **DC4s_v2** VM deployment (standalone or in AKS cluster)
