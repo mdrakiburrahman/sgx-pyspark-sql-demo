@@ -4,7 +4,7 @@
 
 This repository demonstrates the following architecture for **Confidential Analytics** on Azure SGX enabled machines (**AKS** or **Standalone**) for running containerized applications: <br>
 
-> 💡 Confidential analytics in this context means: run analytics on PII data with peace of mind against data exfiltration
+> 💡 Confidential analytics in this context is meant to imply: **_"run analytics on PII data with peace of mind against data exfiltration"_**
 
 ![Architecture Diagram](images/Architecture-Diagram.png)
 
