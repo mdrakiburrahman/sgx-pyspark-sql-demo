@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository demonstrates the following architecture for **Confidential Analytics** on Azure SGX enabled machines (**AKS**, **Standalone**) for running containerized applications: <br><br>
+This repository demonstrates the following architecture for **Confidential Analytics** on Azure SGX enabled machines (**AKS** or **Standalone**) for running containerized applications: <br><br>
 
 ![Architecture Diagram](images/Architecture-Diagram.png)
 
@@ -12,7 +12,7 @@ Demonstrate how to run **end-to-end Confidential Analytics** on Azure (presumabl
 
 ### Key points
 
-- We run a containerized [Spark 3.1.1](https://spark.apache.org/releases/spark-release-3-1-1.html) application, on an [**Azure DC4s_v2**](https://docs.microsoft.com/en-us/azure/virtual-machines/dcv2-series) machine running Docker. These machines are backed by the latest generation of Intel XEON E-2288G Processor with [SGX extensions](https://software.intel.com/content/www/us/en/develop/topics/software-guard-extensions.html) - the key component to enabling the core message of this demo.
+- We run a containerized [Spark 3.1.1](https://spark.apache.org/releases/spark-release-3-1-1.html) application, on an [**Azure DC4s_v2**](https://docs.microsoft.com/en-us/azure/virtual-machines/dcv2-series) machine running Docker. These machines are backed by the latest generation of Intel XEON E-2288G Processor with [SGX extensions](https://software.intel.com/content/www/us/en/develop/topics/software-guard-extensions.html) - the **_key component_** to enabling the core message of this demo.
   - **💡 Note**: This demo works identically well on [AKS running DC4s_v2 nodes](https://docs.microsoft.com/en-us/azure/confidential-computing/confidential-computing-enclaves). We perform the demo on the standalone node to enjoy the additional benefits of RDP for demonstrations purposes that `kubectl` wouldn't allow as easily.
 - To run Spark inside an SGX enclave - we leverage [SCONE](https://docs.microsoft.com/en-us/azure/confidential-computing/confidential-containers#scone-scontain), who have essentially taken the [Open Source Spark code](https://sconedocs.github.io/sconeapps_spark/), and wrapped it with their runtime so that Spark can run inside SGX enclaves (a task that requires deep knowledge of the SGX ecosystem - something SCONE is an expert at).
   - **Introduction**: Here's a fantastic video on SCONE from one of the founders - Professor Christof Fetzer:
@@ -25,8 +25,8 @@ Demonstrate how to run **end-to-end Confidential Analytics** on Azure (presumabl
 1. Access to SCONE's Spark image: `#TODO`
 2. Follow the tutorial here to deploy an Azure SQL Always Encrypted with Secure Enclaves Database with some sample PII data: [link](https://docs.microsoft.com/en-us/azure/azure-sql/database/always-encrypted-enclaves-getting-started)
 3. A DC4s_v2 VM deployment (standalone or in AKS cluster)
-   - For Scenario 1 (baseline), you can run the demo on any machine (including the DC4s_v2 machine).
-   - Scenario 2 will not work without SGX
+   - **Scenario 1** (baseline) can run on any machine (including the DC4s_v2 machine). I perform it on my Surface laptop 3.
+   - **Scenario 2** will not work without SGX - i.e. must run on an Azure DC series machine. You can enable [xfce](https://www.xfce.org/) to get an RDP interface.
 
 ## Live Demo
 
@@ -36,31 +36,77 @@ Demonstrate how to run **end-to-end Confidential Analytics** on Azure (presumabl
 
 ![Scenario 1](images/Scenario-1.png)
 
-<details>
-  <summary>Demo Steps</summary>
-  
-  **Setup**
-  1. RDP into VM
-  2. Navigate to `http://localhost:28778/` [log.io](https://github.com/NarrativeScience/log.io) and `localhost:8080/` [Spark Web UI](https://spark.apache.org/docs/3.0.0-preview/web-ui.html)
-  
-  ** Run code**
-  ```bash
-    # Run Container
-    docker run -it --rm --name "sgx_pyspark_sql" --privileged -p 8080:8080 -p 6868:6868 -p 28778:28778 aiaacireg.azurecr.io/scone/sgx-pyspark-sql sh
+**Setup**
 
-    # Replace the JDBC endpoint before running job
-    vi input/code/azure-sql.py
+1. RDP into VM
+2. Navigate to `http://localhost:28778/` [log.io](https://github.com/NarrativeScience/log.io) and `localhost:8080/` [Spark Web UI](https://spark.apache.org/docs/3.0.0-preview/web-ui.html)
 
-    # E.g. jdbc:sqlserver://your--server--name.database.windows.net:1433;database=ContosoHR;user=your--username@your--server--name;password=your--password;
+```bash
+# Run Container
+docker run -it --rm --name "sgx_pyspark_sql" --privileged -p 8080:8080 -p 6868:6868 -p 28778:28778 aiaacireg.azurecr.io/scone/sgx-pyspark-sql sh
 
-    # Scenario 1: Scone: Off | Data: Encrypted | Code: Plaintext
-    ############################################################
-    # Run Spark job
-    /spark/bin/spark-submit --driver-class-path input/libraries/mssql-jdbc-9.2.1.jre8.jar input/code/azure-sql.py >> output.txt 2>&1 &
+# Replace the JDBC endpoint before running job
+vi input/code/azure-sql.py
 
-    # Testing the memory attack
-    ./memory-dump.sh
+# E.g. jdbc:sqlserver://your--server--name.database.windows.net:1433;database=ContosoHR;user=your--username@your--server--name;password=your--password;
+
+# Scenario 1: Scone: Off | Data: Encrypted | Code: Plaintext
+############################################################
+# Run Spark job
+/spark/bin/spark-submit --driver-class-path input/libraries/mssql-jdbc-9.2.1.jre8.jar input/code/azure-sql.py >> output.txt 2>&1 &
+
+# Testing the memory attack
+./memory-dump.sh
 
 ```
-</details>
+
+## Scenario 2: Spark with Scone running on SGX (DC4s_v2)
+
+![Scenario 2](images/Scenario-2.png)
+
+**Setup**
+
+1. RDP into VM (need xfce or similar)
+2. Navigate to `http://localhost:6688/#{%221618872518526%22:[%22spark|SCONE-PySpark%22]}` [log.io - newer version](https://github.com/NarrativeScience/log.io) and `localhost:8080/` [Spark Web UI](https://spark.apache.org/docs/3.0.0-preview/web-ui.html)
+
+```bash
+# Elevate to superuser for Docker
+sudo su -
+
+# Set SGX variable - for more information, see https://sconedocs.github.io/sgxinstall/
+export MOUNT_SGXDEVICE="-v /dev/sgx/:/dev/sgx"
+
+# Run
+docker run $MOUNT_SGXDEVICE -it --rm --name "sgx_pyspark_3" --privileged -p 8080:8080 -p 6688:6688 aiaacireg.azurecr.io/scone/sgx-pyspark-3 sh
+
+# Replace the JDBC endpoint before running job
+vi input/code/azure-sql.py
+
+# E.g. jdbc:sqlserver://your--server--name.database.windows.net:1433;database=ContosoHR;user=your--username@your--server--name;password=your--password;columnEncryptionSetting=enabled;enclaveAttestationUrl=https://your--attestation--url.eus.attest.azure.net/attest/SgxEnclave;enclaveAttestationProtocol=AAS;keyVaultProviderClientId=your--sp--id;keyVaultProviderClientKey=your--sp--secret;
+
+# Scenario 1: Scone: On | Data: CMK Protected | Code: Plaintext
+############################################################
+# Run Spark job
+/spark/bin/spark-submit --driver-class-path input/libraries/mssql-jdbc-9.2.0.jre8-shaded.jar input/code/azure-sql.py >> output.txt 2>&1 &
+
+# Testing the memory attack
+./memory-dump.sh
+
+# Scenario 2: Scone: On | Data: CMK Protected | Code: Encrypted
+############################################################
+# Show that there is no encrypted code
+tree
+
+# Encrypt code into fspf
+source ./fspf.sh
+
+# Show the encrypted code
+tree
+vi encrypted-files/azure-sql.py
+
+# Run Spark job
+/spark/bin/spark-submit --driver-class-path input/libraries/mssql-jdbc-9.2.0.jre8-shaded.jar encrypted-files/azure-sql.py >> output.txt 2>&1 &
+
+# Testing the memory attack
+./memory-dump.sh
 ```
