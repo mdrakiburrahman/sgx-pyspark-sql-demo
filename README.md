@@ -20,7 +20,7 @@ Demonstrate how to run **end-to-end Confidential Analytics** on Azure (presumabl
 
   - **Introduction**: Here's a fantastic video on SCONE from one of the founders - [Professor Christof Fetzer](https://github.com/christoffetzer): <br>
     [![Scone walkthrough](https://img.youtube.com/vi/aoA8pwasMqs/0.jpg)](https://youtu.be/aoA8pwasMqs)
-  - **Deep dive**: If you're looking for deeper material on SCONE, here's the academic paper describing the underlying mechanics: [link](https://www.usenix.org/system/files/conference/osdi16/osdi16-arnautov.pdf)
+  - **Deep dive**: If you're looking for deeper material on SCONE, here's an academic paper describing the underlying mechanics: [link](https://www.usenix.org/system/files/conference/osdi16/osdi16-arnautov.pdf)
   - **Deep dive w/ commentary**: This is an entertaining walkthrough of the above paper by [Jessie Frazelle](https://github.com/jessfraz) - also a leader in the Confidential Computing space. <br>
     [![SCONE: Secure Linux Containers with Intel SGX](https://img.youtube.com/vi/3UYczEYrxuY/0.jpg)](https://youtu.be/3UYczEYrxuY)
 
