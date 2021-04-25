@@ -43,6 +43,8 @@ Demonstrate how to run **end-to-end Confidential Analytics** on Azure (presumabl
 1. RDP into VM
 2. Navigate to `http://localhost:28778/` [(log.io)](https://github.com/NarrativeScience/log.io) and `localhost:8080/` [(Spark Web UI)](https://spark.apache.org/docs/3.0.0-preview/web-ui.html)
 
+**Execute steps**
+
 ```bash
 # Run Container
 docker run -it --rm --name "sgx_pyspark_sql" --privileged -p 8080:8080 -p 6868:6868 -p 28778:28778 aiaacireg.azurecr.io/scone/sgx-pyspark-sql sh
@@ -70,6 +72,8 @@ vi input/code/azure-sql.py
 
 1. RDP into VM (need xfce or similar)
 2. Navigate to `http://localhost:6688/#{%221618872518526%22:[%22spark|SCONE-PySpark%22]}` [(log.io - newer version)](https://github.com/NarrativeScience/log.io) and `localhost:8080/` [(Spark Web UI)](https://spark.apache.org/docs/3.0.0-preview/web-ui.html)
+
+**Execute steps**
 
 ```bash
 # Elevate to superuser for Docker
