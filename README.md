@@ -54,6 +54,9 @@ Demonstrate how to run **end-to-end Confidential Analytics** on Azure (presumabl
 # Run Container
 docker run -it --rm --name "sgx_pyspark_sql" --privileged -p 8080:8080 -p 6868:6868 -p 28778:28778 aiaacireg.azurecr.io/scone/sgx-pyspark-sql sh
 
+# Explore Docker Entrypoint to see startup
+vi /usr/local/bin/docker-entrypoint.sh
+
 # Replace the JDBC endpoint before running job
 vi input/code/azure-sql.py
 
@@ -87,8 +90,11 @@ sudo su -
 # Set SGX variable - for more information, see https://sconedocs.github.io/sgxinstall/
 export MOUNT_SGXDEVICE="-v /dev/sgx/:/dev/sgx"
 
-# Run
+# Run Container
 docker run $MOUNT_SGXDEVICE -it --rm --name "sgx_pyspark_3" --privileged -p 8080:8080 -p 6688:6688 aiaacireg.azurecr.io/scone/sgx-pyspark-3 sh
+
+# Explore Docker Entrypoint to see startup
+vi /usr/local/bin/docker-entrypoint.sh
 
 # Replace the JDBC endpoint before running job
 vi input/code/azure-sql.py
