@@ -91,7 +91,7 @@ vi input/code/azure-sql.py
 # E.g. jdbc:sqlserver://your--server--name.database.windows.net:1433;database=ContosoHR;user=your--username@your--server--name;password=your--password;columnEncryptionSetting=enabled;enclaveAttestationUrl=https://your--attestation--url.eus.attest.azure.net/attest/SgxEnclave;enclaveAttestationProtocol=AAS;keyVaultProviderClientId=your--sp--id;keyVaultProviderClientKey=your--sp--secret;
 
 # Scenario 1: Scone: On | Data: CMK Protected | Code: Plaintext
-############################################################
+###############################################################
 # Run Spark job
 /spark/bin/spark-submit --driver-class-path input/libraries/mssql-jdbc-9.2.0.jre8-shaded.jar input/code/azure-sql.py >> output.txt 2>&1 &
 
@@ -99,7 +99,7 @@ vi input/code/azure-sql.py
 ./memory-dump.sh
 
 # Scenario 2: Scone: On | Data: CMK Protected | Code: Encrypted
-############################################################
+###############################################################
 # Show that there is no encrypted code
 tree
 
