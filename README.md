@@ -44,7 +44,7 @@ Demonstrate how to run **end-to-end Confidential Analytics** on Azure (presumabl
 
 **Setup**
 
-1. RDP into VM
+1. RDP into VM/laptop
 2. Navigate to `http://localhost:28778/` [(log.io)](https://github.com/NarrativeScience/log.io) and `localhost:8080/` [(Spark Web UI)](https://spark.apache.org/docs/3.0.0-preview/web-ui.html)
 
 **Execute steps**
@@ -74,7 +74,7 @@ vi input/code/azure-sql.py
 
 **Setup**
 
-1. RDP into VM (need xfce or similar)
+1. RDP into Azure DC VM (need xfce or similar desktop interface)
 2. Navigate to `http://localhost:6688/#{%221618872518526%22:[%22spark|SCONE-PySpark%22]}` [(log.io - newer version)](https://github.com/NarrativeScience/log.io) and `localhost:8080/` [(Spark Web UI)](https://spark.apache.org/docs/3.0.0-preview/web-ui.html)
 
 **Execute steps**
