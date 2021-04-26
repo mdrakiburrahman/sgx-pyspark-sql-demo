@@ -37,7 +37,7 @@ Demonstrate how to run **end-to-end Confidential Analytics** on Azure (presumabl
 
 ## Live Demo
 
-`#TODO`
+[![End-to-end Live Demo](http://i3.ytimg.com/vi/em6ovuznAf8/maxresdefault.jpg)](https://youtu.be/em6ovuznAf8)
 
 ## Scenario 1: Spark job running on non-SGX hardware
 
