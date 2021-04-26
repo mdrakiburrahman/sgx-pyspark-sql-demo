@@ -12,6 +12,10 @@ This repository demonstrates the following architecture for **Confidential Analy
 
 Demonstrate how to run **end-to-end Confidential Analytics** on Azure (presumably on PII data), leveraging [Azure SQL Always Encrypted with Secure Enclaves](https://docs.microsoft.com/en-us/sql/relational-databases/security/encryption/always-encrypted-enclaves?view=sql-server-ver15) as the database, and containerized **Apache Spark** on SGX-enabled Azure machines for analytics workloads.
 
+## Live Demo
+
+[![SCONE: Secure Linux Containers with Intel SGX](https://img.youtube.com/vi/em6ovuznAf8/0.jpg)](https://youtu.be/em6ovuznAf8)
+
 ### Key points
 
 - **Azure DC Series**: We run a containerized [Spark 3.1.1](https://spark.apache.org/releases/spark-release-3-1-1.html) application, on an [**Azure DC4s_v2**](https://docs.microsoft.com/en-us/azure/virtual-machines/dcv2-series) machine running Docker. These machines are backed by the latest generation of Intel XEON E-2288G Processor with [SGX extensions](https://software.intel.com/content/www/us/en/develop/topics/software-guard-extensions.html) - the **_key component_** to enabling the core message of this demo.
@@ -34,10 +38,6 @@ Demonstrate how to run **end-to-end Confidential Analytics** on Azure (presumabl
 3. A **DC4s_v2** VM deployment (standalone or in AKS cluster)
    - **Scenario 1** (baseline) can run on any machine (including the DC4s_v2 machine). I perform it on my Surface laptop 3.
    - **Scenario 2** will not work without SGX - i.e. must run on an Azure DC series machine. You can enable [xfce](https://www.xfce.org/) to get an RDP interface.
-
-## Live Demo
-
-[![End-to-end Live Demo](http://i3.ytimg.com/vi/em6ovuznAf8/maxresdefault.jpg)](https://youtu.be/em6ovuznAf8)
 
 ## Scenario 1: Spark job running on non-SGX hardware
 
