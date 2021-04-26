@@ -9,6 +9,8 @@
 #
 # Copyright (C) 2018 Scontain UG
 
+# For more details, see SCONE Fileshield: https://sconedocs.github.io/SCONE_Fileshield/
+
 # Initialize /fspf/encrypted-files/
 mkdir -p encrypted-files
 rm -rf encrypted-files/*
