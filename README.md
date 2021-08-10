@@ -127,3 +127,58 @@ vi encrypted-files/azure-sql.py
 # Testing the memory attack
 ./memory-dump.sh
 ```
+
+## Scenario 3: Spark with Scone on Confidential AKS clusters
+
+In this scenario, we leverage Spark with Scone on a Confidential AKS cluster to process larger datasets in a distributed fashion. The tasks are divided among the available executors, which allows for horizontal scalability. The executors are written in Python and have their source code encrypted by Scone filesystem protection features.
+
+The same protection guarantees as the previous scenarios apply here too. Kubernetes admins, or any privileged user, cannot inspect the in-memory contents or source code of driver or executors. If the dataset/task are too large to fit inside of the protected Intel SGX memory (EPC), the enclaves will use the main memory as a swap space. This process, however, does not violate security guarantees, as all the data that goes into main memory is encrypted with SGX-derived keys. The only drawback of swapping is the performance overhead of encrypting/decrypting the data. The size of the protected memory (EPC) supported by Intel chips is up to 512 GB for the Ice Lake family and later, and up to 256 MB for previous generations.
+
+**Setup**
+
+1. Configure `kubectl` access to a Confidential AKS cluster (`az aks get-credentials` command). [Learn more on how to configure credentials or create new Azure Confidential Computing-enabled AKS clusters](https://docs.microsoft.com/en-us/azure/confidential-computing/confidential-nodes-aks-get-started). We suggest node sizes `Standard_DC2s_v2` and bigger.
+2. Get access to the PySpark base image used in this demo: `registry.scontain.com:5050/clenimar/pyspark:5.5.0-amd-experimental-k8s`
+
+**Execute steps**
+
+```bash
+# Build and push image.
+# The image must be pushed, so pick a suitable name (make sure you have push rights!).
+export IMAGE=clenimar/test:pyspark-scone
+docker build . -t $IMAGE -f encrypted.Dockerfile
+docker push $IMAGE
+
+# We're use the same image as the client, so we mount the Kubernetes credentials
+# into the container (~/.kube).
+docker run -it --rm --entrypoint bash -v $HOME/.kube:/root/.kube -e IMAGE=$IMAGE -e SCONE_MODE=sim $IMAGE
+
+# If not already, setup RBAC for Spark in Kubernetes.
+kubectl apply -f /fspf/kubernetes/rbac.yaml
+
+# Inside of the container, gather the master address.
+export MASTER_ADDRESS=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
+
+# Export key and tag for the encrypted executors. This will allow the SCONE runtime
+# to transparently decrypt the encrypted source code. In a production setting
+# these variables are securely injected by SCONE CAS after remote attestation.
+export SCONE_FSPF_KEY=$(cat /fspf/keytag.txt | awk '{print $11}')
+export SCONE_FSPF_TAG=$(cat /fspf/keytag.txt | awk '{print $9}')
+
+# Generate the properties file from the template (will replace $IMAGE,
+# $SCONE_FSPF_KEY and $SCONE_FSPF_TAG).
+# If you use images held in private registries, add
+# `spark.kubernetes.container.image.pullSecrets $SECRET_NAME` to properties file.
+#
+# NOTE: If running on non-SGX nodes, adjust the properties file accordingly:
+# - remove the property `spark.kubernetes.executor.podTemplateFile`
+# - remove the property `spark.kubernetes.driver.podTemplateFile`
+# - add property `spark.kubernetes.driverEnv.SCONE_MODE sim`
+envsubst < /fspf/properties.template > /fspf/properties
+
+# Submit job to the cluster.
+spark-submit --master k8s://$MASTER_ADDRESS --deploy-mode cluster --name nyc-taxi-yellow --properties-file /fspf/properties local:///fspf/encrypted-files/nyc-taxi-yellow.py
+
+# The driver pod will spawn the executors, and clean up after they're finished.
+# Once the job is finished, the driver pod will be kept in Completed state.
+# Executor logs will be displayed in the driver pod.
+```
