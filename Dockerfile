@@ -14,10 +14,12 @@ WORKDIR /fspf
 ADD . .
 ADD input/libraries/* /spark/jars/
 
+# Dos2Unix Cleanup - required for Windows Users running Bash
+RUN for f in *.sh; do dos2unix $f; chmod u+r+x $f; done
+
 # Encrypt the executor code with SCONE FSPF.
 # NOTE: We can't access the SGX driver from within the
 # Docker build context, so set SCONE_MODE=sim.
-RUN chmod a+x /fspf/fspf.sh \
-    && SCONE_MODE=sim /fspf/fspf.sh
+RUN SCONE_MODE=sim /fspf/fspf.sh
 
 ENTRYPOINT [ "/opt/entrypoint.sh" ]
