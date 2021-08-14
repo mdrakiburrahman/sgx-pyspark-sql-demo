@@ -127,3 +127,96 @@ vi encrypted-files/azure-sql.py
 # Testing the memory attack
 ./memory-dump.sh
 ```
+
+## Scenario 3: Spark with Scone on Confidential AKS clusters
+
+In this scenario, we leverage Spark with Scone on a Confidential AKS cluster to process larger datasets in a distributed fashion. The tasks are divided among the available executors, which allows for horizontal scalability. The executors are written in Python and have their source code encrypted by Scone filesystem protection features.
+
+The same protection guarantees as the previous scenarios apply here too. Kubernetes admins, or any privileged user, cannot inspect the in-memory contents or source code of driver or executors. If the dataset/task are too large to fit inside of the protected Intel SGX memory (EPC), the enclaves will use the main memory as a swap space. This process, however, does not violate security guarantees, as all the data that goes into main memory is encrypted with SGX-derived keys. The only drawback of swapping is the performance overhead of encrypting/decrypting the data. The size of the protected memory (EPC) supported by Intel chips is up to 512 GB for the Ice Lake family and later, and up to 256 MB for previous generations.
+
+**Setup**
+
+1. Configure `kubectl` access to a Confidential AKS cluster (`az aks get-credentials` command). [Learn more on how to configure credentials or create new Azure Confidential Computing-enabled AKS clusters](https://docs.microsoft.com/en-us/azure/confidential-computing/confidential-nodes-aks-get-started). We suggest node sizes `Standard_DC2s_v2` and bigger.
+2. Get access to the PySpark base image used in this demo: `registry.scontain.com:5050/clenimar/pyspark:5.5.0-amd-experimental-k8s`
+
+**Execute steps**
+
+```bash
+# Build and push image.
+# The image must be pushed, so pick a suitable name (make sure you have push rights!).
+export IMAGE=clenimar/test:pyspark-scone
+docker build . -t $IMAGE
+docker push $IMAGE
+
+# We're use the same image as the client, so we mount the Kubernetes credentials
+# into the container (~/.kube).
+docker run -it --rm --entrypoint bash -v $HOME/.kube:/root/.kube -e IMAGE=$IMAGE -e SCONE_MODE=sim $IMAGE
+
+# If not already, setup RBAC for Spark in Kubernetes.
+kubectl apply -f /fspf/kubernetes/rbac.yaml
+
+# Inside of the container, gather the master address.
+export MASTER_ADDRESS=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
+
+# Export key and tag for the encrypted executors. This will allow the SCONE runtime
+# to transparently decrypt the encrypted source code. In a production setting
+# these variables are securely injected by SCONE CAS after remote attestation.
+export SCONE_FSPF_KEY=$(cat /fspf/keytag.txt | awk '{print $11}')
+export SCONE_FSPF_TAG=$(cat /fspf/keytag.txt | awk '{print $9}')
+
+# Generate the properties file from the template (will replace $IMAGE,
+# $SCONE_FSPF_KEY and $SCONE_FSPF_TAG).
+# If you use images held in private registries, add
+# `spark.kubernetes.container.image.pullSecrets $SECRET_NAME` to properties file.
+#
+# NOTE: If running on non-SGX nodes, adjust the properties file accordingly:
+# - remove the property `spark.kubernetes.executor.podTemplateFile`
+# - remove the property `spark.kubernetes.driver.podTemplateFile`
+# - add property `spark.kubernetes.driverEnv.SCONE_MODE sim`
+envsubst < /fspf/properties.template > /fspf/properties
+
+# Submit job to the cluster.
+spark-submit --master k8s://$MASTER_ADDRESS --deploy-mode cluster --name nyc-taxi-yellow --properties-file /fspf/properties local:///fspf/encrypted-files/nyc-taxi-yellow.py
+
+# The driver pod will spawn the executors, and clean up after they're finished.
+# Once the job is finished, the driver pod will be kept in Completed state.
+# Executor logs will be displayed in the driver pod.
+```
+
+**Benchmark**
+
+To assess performance of Spark with Scone, we compare Scone against a vanilla PySpark (i.e., a regular image with no SGX support) image for the same aggregation on a large dataset stored in Azure Blob Storage. We use the [NYC Taxi (Yellow)](https://docs.microsoft.com/en-us/azure/open-datasets/dataset-taxi-yellow) dataset, which has approximately 1.5 billion rows and 50 GB.
+
+Workload:
+
+- Spark job performs a `df.count()` on the dataset, which returns the total number of rows. In Scone scenarios, the workload (drivers/executors) have their Python code encrypted.
+
+Scenarios:
+
+| Scenario | Description |
+| :-: | - |
+| **Scone (Intel/hardware mode)** | The driver and the executors are encrypted and run on Intel CPUs with SGX support, benefitting from all hardware-backed security guarantees provided by Intel SGX and Scone |
+| **Scone (AMD/simulated mode)** | The driver and the executors are encrypted and run on AMD CPUs. Scone simulates an SGX enclave by creating encrypted memory regions |
+| **Vanilla (Intel/no SGX)** | Baseline. The driver and the executors are in plain text and run on Intel CPUs without SGX support using vanilla PySpark images |
+
+Clusters:
+
+| Cluster | Node size | vCPUs; RAM | SGX EPC memory | Region | Workloads |
+| - | :-: | :-: | :-: | :-: | :-: |
+| Intel | [Standard_DC2s_v2](https://docs.microsoft.com/en-us/azure/virtual-machines/dcv2-series) | 2; 8 GB | 56 MB | us-east | **Scone (Intel/hardware mode)** and **Vanilla (Intel/no SGX)**
+| AMD | [Standard_D2a_v4](https://docs.microsoft.com/en-us/azure/virtual-machines/dav4-dasv4-series#dav4-series) | 2; 8 GB | - | us-east | **Scone (AMD/simulated mode)**
+
+- All scenarios run on AKS clusters.
+- To minimize the role of latency in the results, all nodes are located in the same region as the dataset, `us-east`.
+- All containers (driver or executor) have the same size and memory limits: 4.3 GB.
+- All Scone containers have the same enclave size of 1 GB, as defined by the environment variable `SCONE_HEAP`.
+- We run one executor per cluster node.
+- The results below are actually the mean of each configuration. We use a repetition factor of 3.
+
+Results:
+
+![Scone PySpark on AKS](images/Scone-PySpark-on-AKS.png)
+
+The results show that Scone PySpark provides a comparable performance (in both HW/SIM modes) and horizontal scalability against a vanilla PySpark image for a simple aggregation over a large dataset. Even though the aggregation itself is simple (`df.count()`), it shows that having a dataset much larger (50 GB) than the container memory limits (4.5 GB), enclave size (1 GB) and SGX EPC memory (56 MB) is not a dealbreaker. Furthermore, Scone scenarios have their driver/executor code encrypted.
+
+Scone also supports the fine-tuning of its runtime performance through a configuration file, where one can configure the number of queues and threads to better suit the workload needs. For example, workloads that execute more system calls (e.g., I/O-intensive) tend to benefit from having more application threads (called _ethreads_), or to have them pinned to specific CPU cores to avoid core switching. [Learn more about Scone runtime configuration](https://sconedocs.github.io/SCONE_ENV/).
