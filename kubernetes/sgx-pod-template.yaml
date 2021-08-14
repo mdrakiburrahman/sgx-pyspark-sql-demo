@@ -5,4 +5,10 @@ spec:
     - name: azure-pyspark
       resources:
         limits:
+          cpu: "2"
+          memory: 4Gi
+          sgx.intel.com/enclave: 1
+        requests:
+          cpu: "1"
+          memory: 2Gi
           sgx.intel.com/enclave: 1
