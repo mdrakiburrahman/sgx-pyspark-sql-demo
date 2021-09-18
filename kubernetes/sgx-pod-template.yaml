@@ -3,12 +3,15 @@ kind: Pod
 spec:
   containers:
     - name: azure-pyspark
+      env:
+      - name: SCONE_LAS_ADDR
+        valueFrom:
+          fieldRef:
+            fieldPath: status.hostIP
       resources:
         limits:
           cpu: "2"
-          memory: 4Gi
           sgx.intel.com/enclave: 1
         requests:
           cpu: "1"
-          memory: 2Gi
           sgx.intel.com/enclave: 1

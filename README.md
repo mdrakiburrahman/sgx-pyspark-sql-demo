@@ -144,10 +144,22 @@ The same protection guarantees as the previous scenarios apply here too. Kuberne
 
 Either way, both with upcoming Ice Lake and with current-gen SGX chips, the ability to horizontally scale on "Big Data" (i.e. 50 GB+ - bigger than a single Pod can process - requiring distributing the computation across Pods) while enjoying realistic computation times means the techniques illustrated in this article is Production Ready regardless of the size of the data we're looking to process via Apache Spark on Scone.
 
+### Running with Remote Attestation
+
+Remote attestation ensures that your workload has not been tampered with when deployed to a untrusted host, such as a VM instance or a Kubernetes node that runs on the cloud. In this process, attestation evidence provided by Intel SGX hardware is analyzed by an attestation provider. To perform remote attestation on a Scone application (such as Spark driver and executor pods), two services are required:
+
+- **Local Attestation Service (LAS)**: runs on the untrusted host and gathers the attestation evidence provided by Intel SGX about the application being attested. This evidence is signed and forwarded to CAS; and
+- **Configuration and Attestation Service (CAS)**: a central service that manages security policies (called **Scone _sessions_**), configuration and secrets. CAS compares the attestation evidence gathered by LAS against the application's security policies (defined by the application owner) to decide whether the enclave is trustworthy of not. If so, CAS allows the enclave to run and securely injects configuration and secrets into it. [Learn more about CAS and its features, such as secret generation and access control](https://sconedocs.github.io/CASOverview/).
+
+> 💡 The decision of whether the attestation evidence is trustworthy or not can be delegated to a third-party attestation provider, such as Intel Attestation Service or Microsoft Azure Attestation.
+
+For this scenario, we use a [Public CAS](https://sconedocs.github.io/public-CAS/) provided by Scone for test purposes. In production scenarios you will control your own CAS - which also runs inside of enclaves and can be remotely attested.
+
 #### Pre-requisite Setup
 
 1. Configure `kubectl` access to a Confidential AKS cluster (`az aks get-credentials` command). [Learn more on how to configure credentials or create new Azure Confidential Computing-enabled AKS clusters](https://docs.microsoft.com/en-us/azure/confidential-computing/confidential-nodes-aks-get-started). We suggest node sizes `Standard_DC2s_v2` and bigger - with 3 nodes in the nodepool for used in the demo.
-2. Get access to the PySpark base image used in this demo from Scone's Container Registry: `registry.scontain.com:5050/clenimar/pyspark:5.5.0-amd-experimental-k8s` - see [instructions here](https://sconedocs.github.io/SCONE_Curated_Images/)
+2. Deploy Scone LAS to your Kubernetes cluster.
+3. Get access to the PySpark base image used in this demo from Scone's Container Registry: `registry.scontain.com:5050/clenimar/pyspark:5.5.0-amd-experimental-k8s` - see [instructions here](https://sconedocs.github.io/SCONE_Curated_Images/).
 
 **An example of the pre-requisite setup - PowerShell:**
 ```powershell
@@ -178,7 +190,10 @@ kubectl get nodes
 # aks-confcompool1-42230234-vmss000000   Ready    agent   49s     v1.20.7
 # aks-nodepool1-42230234-vmss000000      Ready    agent   4h33m   v1.20.7
 
-# 2. Get access to PySpark base image from Scone's Container Registry, build and push to your Container Registry that AKS has access to - e.g. ACR
+# 2. Deploy Scone LAS to your Kubernetes cluster.
+kubectl apply -f kubernetes/scone-las.yaml
+
+# 3. Get access to PySpark base image from Scone's Container Registry, build and push to your Container Registry that AKS has access to - e.g. ACR
 
 # Login to Scone's container registry (after receiving access to Gitlab)
 docker login registry.scontain.com:5050 -u your--scone--gitlab--username -p your--scone--gitlab--password
@@ -216,21 +231,25 @@ cd "/mnt/c/Users/your--username/My Documents/GitHub/sgx-pyspark-sql-demo"
 
 # Build and push image: The image must be pushed to a Container Registry accessible from the Kubernetes Cluster
 export ACR=aiasconfconeaksacr
-export IMAGE=$ACR.azurecr.io/pyspark-scone:5.5.0
-docker build . -t $IMAGE
+export DRIVER_IMAGE=$ACR.azurecr.io/pyspark-scone-driver:5.5.0
+docker build . -t $DRIVER_IMAGE -f driver.Dockerfile
+
+export EXEC_IMAGE=$ACR.azurecr.io/pyspark-scone-exec:5.5.0
+docker build . -t $EXEC_IMAGE -f executor.Dockerfile
 
 # Push image to ACR
 az acr login --name $ACR
-docker push $IMAGE
+docker push $DRIVER_IMAGE
+docker push $EXEC_IMAGE
 
 # We use the same SCONE image as the client (for consistency, also because it has spark-submit available etc.), 
 # We mount the Kubernetes credentials from our local into the container.
 
 # Path where kubeconfig is stored in your environment
-export KUBECONFIG_PATH=/mnt/c/Users/your--username
+export KUBECONFIG_DIR=/mnt/c/Users/your--username/.kube
 
 # Run client container environment
-docker run -it --rm --entrypoint bash -v $KUBECONFIG_PATH/.kube:/root/.kube -e IMAGE=$IMAGE -e SCONE_MODE=sim $IMAGE
+docker run -it --rm --entrypoint bash -v $KUBECONFIG_DIR:/root/.kube -e DRIVER_IMAGE=$DRIVER_IMAGE -e EXEC_IMAGE=$EXEC_IMAGE -e SCONE_MODE=sim $DRIVER_IMAGE
 
 # -------------- Inside pyspark-scone:5.5.0 Container --------------
 # Ensure accessibility to K8s cluster
@@ -243,18 +262,55 @@ kubectl apply -f /fspf/kubernetes/rbac.yaml
 export MASTER_ADDRESS=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
 
 # Export key and tag for the encrypted executors. This will allow the SCONE runtime
-# to transparently decrypt the encrypted source code. In a production setting
-# these variables are securely injected by SCONE CAS after remote attestation.
+# to transparently decrypt the encrypted source code. These variables are securely injected
+# by SCONE CAS after remote attestation.
 export SCONE_FSPF_KEY=$(cat /fspf/keytag.txt | awk '{print $11}')
 export SCONE_FSPF_TAG=$(cat /fspf/keytag.txt | awk '{print $9}')
 
-# Generate the properties file from properties.template 
-# envsubst will replace $IMAGE, $SCONE_FSPF_KEY and $SCONE_FSPF_TAG.
+# Attestation-specific env. vars. which will be used in the Scone session templates.
+# CAS_NAMESPACE is a random CAS namespace to store our policies.
+# PYSPARK_SESSION_NAME is the name of our Scone session.
+# MAA_PROVIDER is the Microsoft Azure Attestation provider we're using to attest our applications.
+# NOTE: Skip if running in simulated mode (remote attestation is only supported in hardware mode).
+export CAS_NAMESPACE="pyspark-azure-$RANDOM$RANDOM"
+export PYSPARK_SESSION_NAME="pyspark"
+export MAA_PROVIDER="https://dataownerccmpv0.eus.attest.azure.net"
+envsubst '$CAS_NAMESPACE' < /fspf/policies/namespace.yaml.template > /fspf/policies/namespace.yaml
+envsubst '$CAS_NAMESPACE $PYSPARK_SESSION_NAME $MAA_PROVIDER $SCONE_FSPF_KEY $SCONE_FSPF_TAG' < /fspf/policies/pyspark.yaml.template > /fspf/policies/pyspark.yaml
 
-# NOTE: If running on non-SGX nodes, adjust the properties file accordingly:
+# Confirm values in the Scone session for PySpark.
+cat /fspf/policies/pyspark.yaml
+
+# Submit Scone session to CAS. In this demo we're using a Public CAS provided by Scone for
+# testing and demo purposes only. More information: https://sconedocs.github.io/public-CAS/
+# 1. Attest Public CAS to make sure it has the expected enclave measurement.
+scone cas attest 5-5-0.scone-cas.cf 783c797f68cc700afdc3067c02a4fcf77ec01f4f880debb5c0ce36bd866e794b -GCS --only_for_testing-debug --only_for_testing-ignore-signer
+# 2. Create our namespace.
+scone session create /fspf/policies/namespace.yaml
+# 3. Create our session.
+scone session create /fspf/policies/pyspark.yaml
+# Now that we created the Scone session, we have to let the application
+# know which session to request when starting up. We do that via the following env. vars:
+export SCONE_CAS_ADDR="5-5-0.scone-cas.cf"
+export SCONE_CONFIG_ID="$CAS_NAMESPACE/$PYSPARK_SESSION_NAME/nyc-taxi-yellow"
+
+# Generate the properties file from properties.template 
+# envsubst will replace $IMAGE, $SCONE_CAS_ADDR and $SCONE_CONFIG_ID.
+
+# NOTE: If running on non-SGX nodes (i.e., in simulated mode), adjust the properties file accordingly:
 # - remove the property `spark.kubernetes.executor.podTemplateFile`
 # - remove the property `spark.kubernetes.driver.podTemplateFile`
+# - remove the property `spark.kubernetes.driverEnv.SCONE_CAS_ADDR`
+# - remove the property `spark.kubernetes.driverEnv.SCONE_CONFIG_ID`
+# - remove the property `spark.executorEnv.SCONE_CAS_ADDR`
+# - remove the property `spark.executorEnv.SCONE_CONFIG_ID`
 # - add property `spark.kubernetes.driverEnv.SCONE_MODE sim`
+#
+# Simulated mode does not support Remote Attestation, so we inject
+# key and tag for the encrypted driver/executors podsdirectly.
+# - add property `spark.kubernetes.driverEnv.SCONE_FSPF /fspf/encrypted-files/volume.fspf`
+# - add property `spark.kubernetes.driverEnv.SCONE_FSPF_KEY $SCONE_FSPF_KEY`
+# - add property `spark.kubernetes.driverEnv.SCONE_FSPF_TAG $SCONE_FSPF_TAG`
 envsubst < /fspf/properties.template > /fspf/properties
 
 # Since we are using images held in ACR, add
