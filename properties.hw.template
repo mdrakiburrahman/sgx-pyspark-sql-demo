@@ -4,11 +4,12 @@ spark.driver.memory 4G
 spark.kubernetes.driver.container.image $DRIVER_IMAGE
 spark.kubernetes.driver.podTemplateFile /fspf/kubernetes/sgx-pod-template.yaml
 spark.kubernetes.driverEnv.SCONE_FORK 1
+spark.kubernetes.driverEnv.SCONE_VERSION 1
 spark.kubernetes.driverEnv.SCONE_CAS_ADDR $SCONE_CAS_ADDR
 spark.kubernetes.driverEnv.SCONE_CONFIG_ID $SCONE_CONFIG_ID-driver
-spark.executor.instances 1
+spark.executor.instances 3
 spark.executor.memory 1G
-spark.executor.memoryOverhead 4G
+spark.executor.memoryOverhead 6G
 spark.executorEnv.SCONE_HEAP 4G
 spark.executorEnv.SCONE_FORK 0
 spark.executorEnv.SCONE_VERSION 1

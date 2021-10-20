@@ -41,7 +41,7 @@ services:
     command: python3 /fspf/encrypted-files/nyc-taxi-yellow.py
     # Fied `mrenclaves` is the list of trustworthy enclave measurements. To retrieve the
     # enclave measurement of your Scone application, run it with env. var. SCONE_HASH=1 set.
-    mrenclaves: ["34d1048434ebe77cf2740355176783aa05ec1d98c8b87bafbd6dd8eafa1a1513"]
+    mrenclaves: ["f5bc48df5283bba455d0bb41b506e46dfb0d9ae68fa15145669d473eac005a89"]
     environment:
       # We use the notation $$SCONE::<secret_name>$$ to inject the value of a secret
       # (defined in `secrets` section) into the environment of the enclave.
@@ -69,7 +69,7 @@ services:
     command: /usr/lib/jvm/java-8-openjdk/bin/java -Dspark.driver.blockManager.port=7079 -Dspark.driver.port=7078 -Xms1024m -Xmx1024m -cp "/opt/spark/conf::/spark/jars/*:" org.apache.spark.executor.CoarseGrainedExecutorBackend --driver-url @@9 --executor-id @@11 --cores @@13 --app-id @@15 --hostname @@17 --resourceProfileId @@19
     # Fied `mrenclaves` is the list of trustworthy enclave measurements. To retrieve the
     # enclave measurement of your Scone application, run it with env. var. SCONE_HASH=1 set.
-    mrenclaves: ["5fef9692cb3a2da00ddb3b0b82f84f5331ef74f8238c22f46ff296b32d5c2c41"]
+    mrenclaves: ["e5c6ddfac4b9fee10e0557ea33a153be3aec97ee81467cb703096a51bdcfe461"]
     environment:
       SPARK_HOME: "/spark"
       SPARK_CONF_DIR: "/spark/conf"

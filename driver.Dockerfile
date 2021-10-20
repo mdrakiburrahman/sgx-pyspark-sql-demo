@@ -1,4 +1,4 @@
-FROM registry.scontain.com:5050/clenimar/pyspark:5.5.0-amd-experimental-k8s
+FROM registry.scontain.com:5050/clenimar/pyspark:5.6.0
 
 USER root
 
@@ -21,5 +21,7 @@ RUN for f in *.sh; do dos2unix $f; chmod u+r+x $f; done
 # NOTE: We can't access the SGX driver from within the
 # Docker build context, so set SCONE_MODE=sim.
 RUN SCONE_MODE=sim /fspf/fspf.sh
+
+ENV SCONE_LOG=ERROR
 
 ENTRYPOINT [ "/opt/entrypoint.sh" ]
