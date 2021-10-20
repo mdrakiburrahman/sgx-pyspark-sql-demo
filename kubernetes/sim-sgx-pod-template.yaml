@@ -8,10 +8,12 @@ spec:
         valueFrom:
           fieldRef:
             fieldPath: status.hostIP
+      securityContext:
+        privileged: true
       resources:
         limits:
-          cpu: "2"
-          sgx.intel.com/enclave: 1
+          cpu: "8"
+          memory: "10Gi"
         requests:
-          cpu: "1"
-          sgx.intel.com/enclave: 1
+          cpu: "4"
+          memory: "10Gi"

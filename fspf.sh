@@ -7,20 +7,20 @@
 #
 # also see https://sconedocs.github.io
 #
-# Copyright (C) 2018 Scontain UG
+# Copyright (C) 2021 Scontain UG
 
 # For more details, see SCONE Fileshield: https://sconedocs.github.io/SCONE_Fileshield/
 
 # Initialize /fspf/encrypted-files/
+cd /fspf
 mkdir -p encrypted-files
 rm -rf encrypted-files/*
 
 # Encrypt files in /fspf/input and store in /fspf/encrypted-files/
-scone fspf create encrypted-files/volume.fspf
-scone fspf addr encrypted-files/volume.fspf / --not-protected --kernel /
-scone fspf addr encrypted-files/volume.fspf /fspf/encrypted-files/ --encrypted --kernel /fspf/encrypted-files/
-scone fspf addf encrypted-files/volume.fspf /fspf/encrypted-files/ /fspf/input/code /fspf/encrypted-files/ 
-scone fspf encrypt encrypted-files/volume.fspf > keytag.txt
+scone fspf create /out/volume.fspf
+scone fspf addr /out/volume.fspf . --encrypted --kernel .
+scone fspf addf /out/volume.fspf . /input/code /fspf/encrypted-files/ 
+scone fspf encrypt /out/volume.fspf > /out/volume_keytag.txt
 
 # This meta-data will be obtained from the CAS component (Configuration and Attestation Service)
 # -------------------------------
@@ -35,6 +35,6 @@ scone fspf encrypt encrypted-files/volume.fspf > keytag.txt
 # https://sconedocs.github.io/cas_intro/
 # https://sconedocs.github.io/hello_world_kubernetes/#run-with-remote-attestation
 # https://sconedocs.github.io/hello_world_kubernetes/#tls-with-certificates-auto-generated-by-cas
-export SCONE_FSPF_KEY=$(cat keytag.txt | awk '{print $11}')
-export SCONE_FSPF_TAG=$(cat keytag.txt | awk '{print $9}')
-export SCONE_FSPF=/fspf/encrypted-files/volume.fspf
+# export SCONE_FSPF_KEY=$(cat keytag.txt | awk '{print $11}')
+# export SCONE_FSPF_TAG=$(cat keytag.txt | awk '{print $9}')
+# export SCONE_FSPF=/fspf/encrypted-files/volume.fspf
