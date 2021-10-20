@@ -294,24 +294,12 @@ scone session create /fspf/policies/pyspark.yaml
 export SCONE_CAS_ADDR="5-5-0.scone-cas.cf"
 export SCONE_CONFIG_ID="$CAS_NAMESPACE/$PYSPARK_SESSION_NAME/nyc-taxi-yellow"
 
-# Generate the properties file from properties.template 
-# envsubst will replace $IMAGE, $SCONE_CAS_ADDR and $SCONE_CONFIG_ID.
-
-# NOTE: If running on non-SGX nodes (i.e., in simulated mode), adjust the properties file accordingly:
-# - remove the property `spark.kubernetes.executor.podTemplateFile`
-# - remove the property `spark.kubernetes.driver.podTemplateFile`
-# - remove the property `spark.kubernetes.driverEnv.SCONE_CAS_ADDR`
-# - remove the property `spark.kubernetes.driverEnv.SCONE_CONFIG_ID`
-# - remove the property `spark.executorEnv.SCONE_CAS_ADDR`
-# - remove the property `spark.executorEnv.SCONE_CONFIG_ID`
-# - add property `spark.kubernetes.driverEnv.SCONE_MODE sim`
+# Generate the properties file from properties.hw.template. This will run in hardware mode and
+# enable remote attestation! Intel SGX is required. envsubst will replace all needed variables.
 #
-# Simulated mode does not support Remote Attestation, so we inject
-# key and tag for the encrypted driver/executors podsdirectly.
-# - add property `spark.kubernetes.driverEnv.SCONE_FSPF /fspf/encrypted-files/volume.fspf`
-# - add property `spark.kubernetes.driverEnv.SCONE_FSPF_KEY $SCONE_FSPF_KEY`
-# - add property `spark.kubernetes.driverEnv.SCONE_FSPF_TAG $SCONE_FSPF_TAG`
-envsubst < /fspf/properties.template > /fspf/properties
+# NOTE: If running on non-SGX nodes (i.e., in simulated mode), run the following instead:
+# envsubst < /fspf/properties.sim.template > /fspf/properties
+envsubst < /fspf/properties.hw.template > /fspf/properties
 
 # Since we are using images held in ACR, add
 # `spark.kubernetes.container.image.pullSecrets $SECRET_NAME` to properties file.

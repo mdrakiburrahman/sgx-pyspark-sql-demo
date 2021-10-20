@@ -1,4 +1,4 @@
-FROM registry.scontain.com:5050/clenimar/pyspark:5.5.0-amd-experimental-k8s-jvm
+FROM registry.scontain.com:5050/clenimar/pyspark:5.6.0-jvm
 
 USER root
 
