@@ -1,16 +1,17 @@
-# Confidential Analytics with Apache Spark on SGX-enabled Containers
+# Confidential Data Analytics with Apache Spark on Intel SGX Confidential Containers
 
 ## Overview
 
-This repository demonstrates the following architecture for **Confidential Analytics** on Azure SGX enabled machines (**AKS** or **Standalone**) for running containerized applications: <br>
+This repository demonstrates the following architecture for **Confidential Data Analytics** on Azure Intel SGX enabled Confidential Virtual machines (**AKS** or **Standalone**) for running containerized applications: <br>
 
-> 💡 Confidential analytics in this context is meant to imply: **_"run analytics on PII data with peace of mind against data exfiltration"_** - this includes potential `root`-level access breach both internally (rogue admin) or externally (system compromise).
+> 💡 Confidential data analytics in this context is meant to imply: **_"run analytics on PII data with peace of mind against data exfiltration"_** - this includes potential `root`-level access breach both internally (rogue admin) or externally (system compromise).
+> Confidential data analytics helps meet your high security and confidentiality needs by removing the untrusted parties from computation like cloud operator, service/guest admins. This execution helps meet your data compliance needs.
 
 ![Architecture Diagram](images/Architecture-Diagram.png)
 
 ### Goal
 
-Demonstrate how to run **end-to-end Confidential Analytics** on Azure (presumably on PII data), leveraging [Azure SQL Always Encrypted with Secure Enclaves](https://docs.microsoft.com/en-us/sql/relational-databases/security/encryption/always-encrypted-enclaves?view=sql-server-ver15) as the database, and containerized **Apache Spark** on SGX-enabled Azure machines for analytics workloads.
+Demonstrate how to run **end-to-end Confidential Data Analytics** on Azure (presumably on PII/trade sensistive data), leveraging [Azure SQL Always Encrypted with Secure Enclaves](https://docs.microsoft.com/en-us/sql/relational-databases/security/encryption/always-encrypted-enclaves?view=sql-server-ver15) as the database, and containerized **Apache Spark** on [Intel SGX-enabled Azure machines](https://docs.microsoft.com/en-us/azure/confidential-computing/confidential-computing-enclaves) for analytics workloads.
 
 ## Live Demo
 
@@ -18,26 +19,21 @@ Demonstrate how to run **end-to-end Confidential Analytics** on Azure (presumabl
 
 ### Key points
 
-- **Azure DC Series**: We run a containerized [Spark 3.1.1](https://spark.apache.org/releases/spark-release-3-1-1.html) application, on an [**Azure DC4s_v2**](https://docs.microsoft.com/en-us/azure/virtual-machines/dcv2-series) machine running Docker. These machines are backed by the latest generation of Intel XEON E-2288G Processor with [SGX extensions](https://software.intel.com/content/www/us/en/develop/topics/software-guard-extensions.html) - the **_key component_** to enabling the core message of this demo.
-  - **💡 Note**: This demo works identically well on [AKS running DC4s_v2 nodes](https://docs.microsoft.com/en-us/azure/confidential-computing/confidential-computing-enclaves). We perform the demo on the standalone node to enjoy the additional benefits of RDP for demonstrations purposes that `kubectl` wouldn't allow as easily.
-- **SCONE**: To run Spark inside an SGX enclave - we leverage [SCONE](https://docs.microsoft.com/en-us/azure/confidential-computing/confidential-containers#scone-scontain), who have essentially taken the [Open Source Spark code](https://sconedocs.github.io/sconeapps_spark/), and wrapped it with their runtime so that Spark can run inside SGX enclaves (a task that requires deep knowledge of the SGX ecosystem - something SCONE is an expert at).
+- **Azure DC Series**: We run a containerized [Spark 3.1.1](https://spark.apache.org/releases/spark-release-3-1-1.html) application, on an [**Azure DC4s_v3**](https://docs.microsoft.com/en-us/azure/virtual-machines/dcv3-series) machine running Docker. These machines are backed by the latest generation of Intel XEON Scalabe Processor with large Encrypted Page Cache (EPC) memory sizes. These Azure Virtual Machines include the [Intel SGX extensions](https://software.intel.com/content/www/us/en/develop/topics/software-guard-extensions.html) - the **_key component_** to enabling the core message of this demo.
+  - **💡 Note**: This demo works identically well on [AKS running DC4s_v3 nodes](https://docs.microsoft.com/en-us/azure/confidential-computing/confidential-computing-enclaves). We perform the demo on the standalone node to enjoy the additional benefits of RDP for demonstrations purposes that `kubectl` wouldn't allow as easily.
+- **SCONE**: To run Spark inside an Intel SGX enclave - we leverage [SCONE](https://docs.microsoft.com/en-us/azure/confidential-computing/confidential-containers#scone-scontain), who have essentially taken the [Open Source Spark code](https://sconedocs.github.io/sconeapps_spark/), and wrapped it with their enclave runtime so that Spark can run inside SGX enclaves (a task that requires deep knowledge of the SGX ecosystem - something SCONE is an expert at).
+> 💡 Please note Scone(scontain) is a Azure partner in confidential computing space who enables easy support to existing docker containers on Intel SGX Enclaves. You can also choose from other OSS and partners from [here](https://docs.microsoft.com/en-us/azure/confidential-computing/confidential-containers).
 
-  - **Introduction**: Here's a fantastic video on SCONE from one of the founders - [Professor Christof Fetzer](https://github.com/christoffetzer): <br>
-    [![Scone walkthrough](https://img.youtube.com/vi/aoA8pwasMqs/0.jpg)](https://youtu.be/aoA8pwasMqs)
-  - **Deep dive**: If you're looking for deeper material on SCONE, here's an academic paper describing the underlying mechanics: [link](https://www.usenix.org/system/files/conference/osdi16/osdi16-arnautov.pdf)
-  - **Deep dive w/ commentary**: This is an entertaining walkthrough of the above paper by [Jessie Frazelle](https://github.com/jessfraz) - also a leader in the Confidential Computing space. <br>
-    [![SCONE: Secure Linux Containers with Intel SGX](https://img.youtube.com/vi/3UYczEYrxuY/0.jpg)](https://youtu.be/3UYczEYrxuY)
-
-  - **Sconedocs**: Scone's official documentation for getting started: [link](https://sconedocs.github.io/)
+   - **Sconedocs**: Scone's official documentation for Azure integration and getting started: [link](https://sconedocs.github.io/aks/)
 
 ### Pre-requisites
 
 1. Registry for access to the 2 Spark images used per scenario:
    - `#TODO`
 2. Follow the tutorial here to deploy an Azure SQL Always Encrypted with Secure Enclaves Database with some sample PII data: [link](https://docs.microsoft.com/en-us/azure/azure-sql/database/always-encrypted-enclaves-getting-started)
-3. A **DC4s_v2** VM deployment (standalone or in AKS cluster)
-   - **Scenario 1** (baseline) can run on any machine (including the DC4s_v2 machine). I perform it on my Surface laptop 3.
-   - **Scenario 2** will not work without SGX - i.e. must run on an Azure DC series machine. You can enable [xfce](https://www.xfce.org/) to get an RDP interface.
+3. A **DC4s_v3** VM deployment (standalone or in AKS cluster)
+   - **Scenario 1** (baseline) can run on any machine (local of Azure VM non-confidential) (including the DC4s_v3 machine).
+   - **Scenario 2** will not work without Intel SGX enabled machines - i.e. must run on an Azure DC series machine. You can enable [xfce](https://www.xfce.org/) to get an RDP interface.
 
 ## Scenario 1: Spark job running on non-SGX hardware
 
@@ -130,7 +126,9 @@ vi encrypted-files/azure-sql.py
 
 ## Scenario 3: Big Data processing with Spark with Scone running on Confidential AKS clusters
 
-In this scenario, we leverage Spark with Scone on a Confidential AKS cluster to process larger datasets in a distributed fashion. The Dataset we use is the common [NYC Taxi](https://docs.microsoft.com/en-us/azure/open-datasets/dataset-taxi-yellow?tabs=pyspark) Dataset - where we demonstrate a simple Spark Job ([`COUNT *`](https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.sql.DataFrame.count.html)) on 1.5 Billion Rows of Parquet files (50 GB) stored on Azure Blob Storage:
+In this scenario, we leverage Spark with Scone on a [Confidential Capable AKS cluster](https://docs.microsoft.com/en-us/azure/confidential-computing/confidential-nodes-aks-get-started) to process larger datasets in a distributed fashion. The Dataset we use is the common [NYC Taxi](https://docs.microsoft.com/en-us/azure/open-datasets/dataset-taxi-yellow?tabs=pyspark) Dataset - where we demonstrate a simple Spark Job ([`COUNT *`](https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.sql.DataFrame.count.html)) on 1.5 Billion Rows of Parquet files (50 GB) stored on Azure Blob Storage:
+
+> Azure Confidential Enclave VM's [DCsv3 and DCdsv3](https://docs.microsoft.com/en-us/azure/virtual-machines/dcv3-series) is in public preview and offers large EPC memeory sizes to help run memory intensive applications like analytics.
 
 ![Scenario 3](images/Scenario-3.png)
 
@@ -138,11 +136,7 @@ The tasks are divided among the available executors (user configurable), which a
 
 ### A note about EPC Memory Size
 
-The same protection guarantees as the previous scenarios apply here too. Kubernetes admins, or any privileged user, cannot inspect the in-memory contents or source code of driver or executors. If the dataset/task are too large to fit inside of the protected Intel SGX memory (EPC - which is up to **256 MB** for Intel E-2200 processors), the enclaves will use the main memory as a swap space. This process, however, does not violate security guarantees, as all the data that goes into main memory is encrypted with SGX-derived keys. The only theoretical drawback of swapping is the performance overhead of encrypting/decrypting the data (which as we'll see from a [benchmark](#benchmark) - is largely scenario dependent. since for this particular scenario we do not see any noticable performance drops).
-
-> 💡 The size of the protected memory (EPC) supported by Intel [Ice Lake](https://www.intel.com/content/www/us/en/newsroom/news/xeon-scalable-platform-built-sensitive-workloads.html) chips is up to **512 GB**. Therefore, the upcoming arrival of Ice Lake hardware on Azure means EPC Memory size becomes equivalent to regular memory - i.e. irrelevant for practical performance purposes - while enforcing the elevated security guarantees we are observing here.
-
-Either way, both with upcoming Ice Lake and with current-gen SGX chips, the ability to horizontally scale on "Big Data" (i.e. 50 GB+ - bigger than a single Pod can process - requiring distributing the computation across Pods) while enjoying realistic computation times means the techniques illustrated in this article is Production Ready regardless of the size of the data we're looking to process via Apache Spark on Scone.
+The same protection guarantees as the previous scenarios apply here too. Kubernetes admins, or any privileged user, cannot inspect the in-memory contents or source code of driver or executors. EPC is specialized memeory partition in an Azure Confidential Enclaves VM that Enclaves or Confidential containers use. These VM's also come with regulay memory (un-encrypted) memeory to run non-enclave apps. As part of this sample we did performance [benchmarking](#benchmark) and did not see any noticable performance drops).
 
 ### Running with Remote Attestation
 
@@ -151,13 +145,16 @@ Remote attestation ensures that your workload has not been tampered with when de
 - **Local Attestation Service (LAS)**: runs on the untrusted host and gathers the attestation evidence provided by Intel SGX about the application being attested. This evidence is signed and forwarded to CAS; and
 - **Configuration and Attestation Service (CAS)**: a central service that manages security policies (called **Scone _sessions_**), configuration and secrets. CAS compares the attestation evidence gathered by LAS against the application's security policies (defined by the application owner) to decide whether the enclave is trustworthy of not. If so, CAS allows the enclave to run and securely injects configuration and secrets into it. [Learn more about CAS and its features, such as secret generation and access control](https://sconedocs.github.io/CASOverview/).
 
+[NOTE][TODO]
+-- Integrate with MAA as part of Scone CAS deployment
 > 💡 The decision of whether the attestation evidence is trustworthy or not can be delegated to a third-party attestation provider, such as Intel Attestation Service or Microsoft Azure Attestation.
 
+(CAN WE REPLACE THIS WITH CAS DEPLOYED WITH MAA AS PROVIDER)
 For this scenario, we use a [Public CAS](https://sconedocs.github.io/public-CAS/) provided by Scone for test purposes. In production scenarios you will control your own CAS - which also runs inside of enclaves and can be remotely attested.
 
 #### Pre-requisite Setup
 
-1. Configure `kubectl` access to a Confidential AKS cluster (`az aks get-credentials` command). [Learn more on how to configure credentials or create new Azure Confidential Computing-enabled AKS clusters](https://docs.microsoft.com/en-us/azure/confidential-computing/confidential-nodes-aks-get-started). We suggest node sizes `Standard_DC2s_v2` and bigger - with 3 nodes in the nodepool for used in the demo.
+1. Configure `kubectl` access to a Confidential AKS cluster (`az aks get-credentials` command). [Learn more on how to configure credentials or create new Azure Confidential Computing-enabled AKS clusters](https://docs.microsoft.com/en-us/azure/confidential-computing/confidential-nodes-aks-get-started). We suggest node sizes `Standard_DC4s_v3` and bigger - with 3 nodes in the nodepool for used in the demo.
 2. Deploy Scone LAS to your Kubernetes cluster.
 3. Get access to the PySpark base image used in this demo from Scone's Container Registry: `registry.scontain.com:5050/clenimar/pyspark:5.5.0-amd-experimental-k8s` - see [instructions here](https://sconedocs.github.io/SCONE_Curated_Images/).
 
