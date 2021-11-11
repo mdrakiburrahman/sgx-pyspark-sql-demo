@@ -1,0 +1,17 @@
+spark.kubernetes.authenticate.driver.serviceAccountName spark-sa
+spark.kubernetes.container.image.pullPolicy Always
+spark.authenticate true
+spark.authenticate.secret bPPAhzzGqtGislSv
+spark.network.crypto.enabled true
+spark.io.encryption.enabled true
+spark.driver.memory 1G
+spark.driver.memoryOverhead 4G
+spark.kubernetes.driver.container.image $DRIVER_IMAGE
+spark.kubernetes.driverEnv.AZURE_BLOB_ACCOUNT_NAME azureopendatastorage
+spark.kubernetes.driverEnv.AZURE_BLOB_CONTAINER_NAME nyctlc
+spark.kubernetes.driverEnv.AZURE_BLOB_RELATIVE_PATH yellow
+spark.kubernetes.driverEnv.AZURE_BLOB_SAS_TOKEN ""
+spark.executor.instances 1
+spark.executor.memory 1G
+spark.executor.memoryOverhead 4G
+spark.kubernetes.executor.container.image $EXEC_IMAGE
