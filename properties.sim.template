@@ -1,6 +1,5 @@
 spark.authenticate true
-# TODO: get secret from secure injected files.
-spark.authenticate.secret bPPAhzzGqtGislSv
+spark.authenticate.secret.file /etc/secret
 spark.network.crypto.enabled true
 spark.io.encryption.enabled true
 spark.kubernetes.authenticate.driver.serviceAccountName spark-sa
