@@ -7,44 +7,55 @@ import os
 from pyspark.sql import SparkSession
 
 if __name__ == "__main__":
-    # Generate delay to allow window for memory attack
     print("###########################################")
     print("######### Starting Spark Session ##########")
     print("###########################################")
-
     # Start SparkSession
     spark = SparkSession \
-        .builder \
-        .appName("NYC TAXI YELLOW") \
-        .getOrCreate()
+            .builder \
+            .appName("Confidential Spark Demo") \
+            .getOrCreate()
 
-    # Azure storage access info. This information is retrieved from the
-    # environment - which is populated by Scone CAS after we make sure
+    # Secrets - this information is retrieved from the
+    # container env variables - which is populated by Scone CAS after we make sure
     # our Python interpreter and PySpark code were not tampered with.
     blob_account_name = os.environ.get("AZURE_BLOB_ACCOUNT_NAME", "")
     blob_container_name = os.environ.get("AZURE_BLOB_CONTAINER_NAME", "")
     blob_relative_path = os.environ.get("AZURE_BLOB_RELATIVE_PATH", "")
     blob_sas_token = r"%s" % os.environ.get("AZURE_BLOB_SAS_TOKEN", "")
+    azure_sql_ae_jdbc = r"%s" % os.environ.get("AZURE_SQL_AE_JDBC", "")
     
-    # Allow SPARK to read from Blob remotely
+    # Read from Azure Blob Storage
     wasbs_path = 'wasbs://%s@%s.blob.core.windows.net/%s' % (blob_container_name, blob_account_name, blob_relative_path)
     spark.conf.set(
       'fs.azure.sas.%s.%s.blob.core.windows.net' % (blob_container_name, blob_account_name),
       blob_sas_token)
     print('Remote blob path: ' + wasbs_path)
+    input_df = spark.read.parquet(wasbs_path)
     
-    # SPARK read parquet, note that it won't load any data yet by now
-    start_time = time.time()
-    df = spark.read.parquet(wasbs_path)
-    print(df.count())
-    print("Took roughly: ", time.time()-start_time)
+    print("###########################################")
+    print("############### COUNT * ###################")
+    print("###########################################")
+    start_time = time.time() # Timer start
+    print("\nInput DataFrame Count:", input_df.count())
+    print("\nAggregation duration: ", time.time()-start_time) # Timer end
 
+    print("###########################################")
+    print("####### Azure SQL Always Encrypted ########")
+    print("###########################################")
+    # Loading Dataframe from Azure SQL
+    AzureSQL_DF = spark.read \
+        .format("jdbc") \
+        .option("url", azure_sql_ae_jdbc) \
+        .option("dbtable", "dbo.Employees") \
+        .load()
+
+    # Encrypted DataFrame is available in plaintext
+    AzureSQL_DF.limit(10) \
+               .show()
+
+    # Can perform analytics as necessary
+    # ....
+
+    # Stop Spark Session
     spark.stop()
-
-    # Generate delay to allow window for memory attack
-    print("###########################################")
-    print("#### Generate window for Memory Attack ####")
-    print("###########################################")
-    print("################ SLEEP 10 #################")
-    print("###########################################")
-    time.sleep(10)

@@ -11,24 +11,46 @@
 
 # For more details, see SCONE Fileshield: https://sconedocs.github.io/SCONE_Fileshield/
 
+# Remove files from previous build
 rm -rf build
+
+# Create build folders
 mkdir -p build/policies build/kubernetes build/cas build/images/driver/fspf/encrypted-files build/images/executor
 
+# Create base spark image
 docker build . -t $SPARK_IMAGE-base -f Dockerfile
 
-docker run --rm -t --entrypoint bash -v $PWD:/fspf -v $PWD/build/images/driver/fspf:/out $SPARK_IMAGE-base /fspf/main_fspf.sh
-docker run --rm -t --entrypoint bash -v $PWD/input:/input -v $PWD:/script -v $PWD/build/images/driver/fspf:/out -v $PWD/build/images/driver/fspf:/fspf $SPARK_IMAGE-base /script/fspf.sh
+# Run scone fspf
+# https://sconedocs.github.io/SCONE_Fileshield/
+docker run --rm -t --entrypoint bash \
+                -v "$PWD":/fspf \
+                -v "$PWD"/build/images/driver/fspf:/out \
+                $SPARK_IMAGE-base \
+                /fspf/main_fspf.sh
 
+# Generate encrypted scripts and libraries
+docker run --rm -t --entrypoint bash \
+                -v "$PWD"/input:/input \
+                -v "$PWD":/script \
+                -v "$PWD"/build/images/driver/fspf:/out \
+                -v "$PWD"/build/images/driver/fspf:/fspf \
+                $SPARK_IMAGE-base \
+                /script/fspf.sh
+
+# Copy volume.fspf
 mv build/images/driver/fspf/volume.fspf build/images/driver/fspf/encrypted-files
 
+# Generate Driver dockerfile from base image
 echo "FROM $SPARK_IMAGE-base" > build/images/driver/Dockerfile
 echo "ADD fspf/fspf.pb /" >> build/images/driver/Dockerfile
 echo "ADD fspf/encrypted-files /fspf/encrypted-files" >> build/images/driver/Dockerfile
 
+# Temporarily change directory to build Driver image - but this time with our encrypted files added
 pushd build/images/driver
 docker build . -t $SPARK_IMAGE
 popd
 
+# Generate environment variables for futher steps
 cat > /tmp/env.sh <<EOF
 export DRIVER_PYTHON_MRENCLAVE=$(docker run --rm -t --entrypoint bash -e SCONE_HASH=1 -e SCONE_HEAP=1G -e SCONE_MPROTECT=0 $SPARK_IMAGE -c "python3")
 

@@ -126,7 +126,13 @@ vi encrypted-files/azure-sql.py
 
 ## Scenario 3: Big Data processing with Spark with Scone running on Confidential AKS clusters
 
-In this scenario, we leverage Spark with Scone on a [Confidential Capable AKS cluster](https://docs.microsoft.com/en-us/azure/confidential-computing/confidential-nodes-aks-get-started) to process larger datasets in a distributed fashion. The Dataset we use is the common [NYC Taxi](https://docs.microsoft.com/en-us/azure/open-datasets/dataset-taxi-yellow?tabs=pyspark) Dataset - where we demonstrate a simple Spark Job ([`COUNT *`](https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.sql.DataFrame.count.html)) on 1.5 Billion Rows of Parquet files (50 GB) stored on Azure Blob Storage:
+In this scenario, we leverage Spark with Scone on a [Confidential Capable AKS cluster](https://docs.microsoft.com/en-us/azure/confidential-computing/confidential-nodes-aks-get-started) to showcase a sample pattern for processing larger datasets in a distributed fashion, as well as showcasing confidential analytics on relational Database Engines storing confidential data.
+
+> As a pre-requsite to this scenario, an Azure SQL Database with Always Encrypted with secure enclaves is required. Please follow the detailed steps outlined in this [`sql-server-samples` repository](https://github.com/microsoft/sql-server-samples/blob/master/samples/features/security/always-encrypted-with-secure-enclaves/azure-sql-database/README.md) to deploy the `ContosoHR` Database. We will not be using the App Service web app that is included in this scenario.
+
+Our Spark application will process 2 sample datasets from 2 data sources:
+1. [Azure Data Lake Storage - Parquet files](https://docs.microsoft.com/en-us/azure/storage/blobs/data-lake-storage-introduction): We use is the common [NYC Taxi](https://docs.microsoft.com/en-us/azure/open-datasets/dataset-taxi-yellow?tabs=pyspark) Dataset - where we demonstrate a simple Spark Job ([`COUNT *`](https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.sql.DataFrame.count.html)) on 1.5 Billion Rows of Parquet files (50 GB) stored on Azure Data Lake Storage.
+2. [Azure SQL DB - Always Encrypted with secure enclaves](https://docs.microsoft.com/en-us/sql/relational-databases/security/encryption/always-encrypted-enclaves?view=sql-server-ver15): We showcase how to access Always Encrypted data (Encrypted [`ContosoHR` Database](https://github.com/microsoft/sql-server-samples/blob/master/samples/features/security/always-encrypted-with-secure-enclaves/azure-sql-database/README.md#demos-steps-1) from this sample) as plaintext inside the Spark Container Enclave.
 
 > Azure Confidential Enclave VM's [DCsv3 and DCdsv3](https://docs.microsoft.com/en-us/azure/virtual-machines/dcv3-series) is in public preview and offers large EPC memeory sizes to help run memory intensive applications like analytics.
 
@@ -136,7 +142,7 @@ The tasks are divided among the available executors (user configurable), which a
 
 ### A note about EPC Memory Size
 
-The same protection guarantees as the previous scenarios apply here too. Kubernetes admins, or any privileged user, cannot inspect the in-memory contents or source code of driver or executors. EPC is specialized memeory partition in an Azure Confidential Enclaves VM that Enclaves or Confidential containers use. These VM's also come with regulay memory (un-encrypted) memeory to run non-enclave apps. As part of this sample we did performance [benchmarking](#benchmark) and did not see any noticable performance drops).
+The same protection guarantees as the previous scenarios apply here too. Kubernetes admins, or any privileged user, cannot inspect the in-memory contents or source code of driver or executors. EPC is specialized memory partition in an Azure Confidential Enclaves VM that Enclaves or Confidential containers use. These VM's also come with regular memory (un-encrypted) memory to run non-enclave apps. As part of this sample we did performance [benchmarking](#benchmark) and did not see any noticeable performance drops).
 
 ### Running with Remote Attestation
 
@@ -151,11 +157,18 @@ For this scenario, we use a [Public CAS](https://sconedocs.github.io/public-CAS/
 
 #### Pre-requisite Setup
 
-1. Configure `kubectl` access to a Confidential AKS cluster (`az aks get-credentials` command). [Learn more on how to configure credentials or create new Azure Confidential Computing-enabled AKS clusters](https://docs.microsoft.com/en-us/azure/confidential-computing/confidential-nodes-aks-get-started). We suggest node sizes `Standard_DC4s_v3` and bigger - with 3 nodes in the nodepool for used in the demo.
-2. Deploy Scone LAS to your Kubernetes cluster.
+1. An Azure Subscription with `Owner` access (required to assign several Service Principal permissions).
+2. [Docker Desktop](https://docs.docker.com/desktop/windows/wsl/#download)
+   1. If running a Windows machine, you will require a Linux environment to run some of the deployment scripts - you can download an [Ubuntu 18.04 LTS](https://www.microsoft.com/en-us/p/ubuntu-1804-lts/9n9tngvndl3q) machine from the Microsoft Store, then [enable WSL integration](https://docs.docker.com/desktop/windows/wsl/#install) with Docker Desktop to access [`docker`](https://docs.docker.com/engine/reference/commandline/cli/) CLI commands _inside_ the WSL runtime.
 3. Get access to the PySpark base image used in this demo from Scone's Container Registry: `registry.scontain.com:5050/clenimar/pyspark:5.6.0plus` - see [instructions here](https://sconedocs.github.io/SCONE_Curated_Images/).
+4. Deploy the `ContosoHR` demo database outlined [in this sample](https://github.com/microsoft/sql-server-samples/blob/master/samples/features/security/always-encrypted-with-secure-enclaves/azure-sql-database/README.md) and configure a Service Principal to have the following *Key Permissions* on the Key Vault storing the [CMK](https://docs.microsoft.com/en-us/azure/azure-sql/database/always-encrypted-azure-key-vault-configure?tabs=azure-powershell#master-key-configuration):
+ - Key Management Operations: `Get`, `List`
+ - Cryptographic Operations: `Unwrap Key`, `Wrap Key`, `Verify`, `Sign`
 
-**An example of the pre-requisite setup - PowerShell:**
+**Azure Infrastructure deployment - PowerShell:**
+> 💡 The script below can be run in a linux environment with minor syntax changes
+
+The following script deploys an AKS Cluster with Confidential Nodepools:
 ```powershell
 # 1. Configure kubectl access to a Confidential AKS Cluster
 az account set --subscription "your--subscription--name"
@@ -166,10 +179,10 @@ $k8s = "your--aks--name"
 az group create --name $rg --location EastUS
 
 # Create AKS cluster with System Node Pool
-az aks create -g $rg --name $k8s --node-count 1 --ssh-key-value 'ssh-rsa AAAAB3Nza...==' --enable-addon confcom
+az aks create -g $rg --name $k8s --node-count 1 --ssh-key-value 'ssh-rsa AAA...' --enable-addon confcom
 
-# Create Confidential Node Pool - 1 Confidential Node
-az aks nodepool add --cluster-name $k8s --name confcompool1 -g $rg --node-vm-size Standard_DC4s_v2 --node-count 1
+# Create Confidential Node Pool - 4 Confidential Nodes
+az aks nodepool add --cluster-name $k8s --name confcompool1 -g $rg --node-vm-size Standard_DC4s_v2 --node-count 4
 
 # Grab kubeconfig from AKS
 az aks get-credentials -g $rg --name $k8s
@@ -184,15 +197,19 @@ kubectl get nodes
 # aks-confcompool1-42230234-vmss000000   Ready    agent   49s     v1.20.7
 # aks-nodepool1-42230234-vmss000000      Ready    agent   4h33m   v1.20.7
 
-# 2. Deploy Scone LAS to your Kubernetes cluster.
+# 2. Deploy Scone LAS - Local Attestation Service - to your Kubernetes cluster
+# https://sconedocs.github.io/LASIntro/
 kubectl apply -f kubernetes/scone-las.yaml
+
+# Submit RBAC policies to your Kubernetes cluster
+kubectl apply -f kubernetes/rbac.yaml
 
 # 3. Get access to PySpark base image from Scone's Container Registry, build and push to your Container Registry that AKS has access to - e.g. ACR
 
 # Login to Scone's container registry (after receiving access to Gitlab)
 docker login registry.scontain.com:5050 -u your--scone--gitlab--username -p your--scone--gitlab--password
 
-# Pull PySpark Container image
+# Pull PySpark Container image to Docker
 docker pull registry.scontain.com:5050/clenimar/pyspark:5.6.0plus
 
 # Create ACR and login
@@ -201,7 +218,7 @@ az acr create -g $rg --name $acr --sku Basic
 az acr login --name $acr
 
 # Image pull secret for Kubernetes
-# AAD Service Principal creating secret (can use new/existing - doesn't matter)
+# AAD Service Principal creating secret - can use new/existing Service Principals
 $SERVICE_PRINCIPAL_ID="your--sp--clientid"
 $SERVICE_PRINCIPAL_SECRET="your--sp--clientpassword"
 
@@ -215,29 +232,38 @@ kubectl create secret docker-registry acrsecret `
 					    --docker-server="$acr.azurecr.io" `
 					    --docker-username=$SERVICE_PRINCIPAL_ID `
 					    --docker-password=$SERVICE_PRINCIPAL_SECRET
+
 ```
+Once the above script is run - you will see these 2 resources:
+![Azure Infrastructure](images/Azure-Infra.png)
+
+And a Confidential Node pool created:
+![Confidential Nodepool](images/Confidential-NodePool.png)
+
 
 **Execute steps - bash**
+> ❗ The script below must run in a `bash` shell due to several dependencies on linux specific commands
+
+The following script deploys the Spark job. Prior to running the bash commands - please replace the following placeholders `<...>` in the JDBC string for the `ContosoHR` database in [`policies\pyspark.hw.yaml.template`](policies\pyspark.hw.yaml.template)
+```text
+jdbc:sqlserver://<your-azure-sql-server>.database.windows.net:1433;database=ContosoHR;user=<your-sql-auth-username>@<your-azure-sql-server>;password=<your-sql-auth-password>;columnEncryptionSetting=enabled;enclaveAttestationUrl=https://<your-attestation-url>.eus.attest.azure.net/attest/SgxEnclave;enclaveAttestationProtocol=AAS;keyVaultProviderClientId=<your-sp-clientid>;keyVaultProviderClientKey=<your--sp--clientkey>;
+```
+
+> In the script below - several places have instructions for [SCONE Simulation mode](https://sconedocs.github.io/firstcontainer/). However, since we have a confidential NodePool in AKS - we will not be needing this.
 
 ```bash
 # Change to directory with this repo
 cd "/mnt/c/Users/your--username/My Documents/GitHub/sgx-pyspark-sql-demo"
 
-# Build the confidential Spark image.
-# The image must be pushed to a Container Registry accessible from the Kubernetes Cluster.
-export ACR=aiasconfconeaksacr
+# If in WSL - run dos2unix
+./convert_dos2unix.sh
+
+##################################################################################################
+# Env variables
+##################################################################################################
+export K8s=your--aks--name
+export ACR=$K8s"acr"
 export SPARK_IMAGE=$ACR.azurecr.io/pyspark-scone:5.6.0
-./build-spark-image.sh
-
-# Source the needed environment variables generated by the build script.
-# The directory "build" is created by the build script and stores build resources
-# for the encrypted Spark images (such as properties, SCONE policies and metadata).
-source build/env.sh
-
-# Push image to ACR.
-az acr login --name $ACR
-docker push $SPARK_IMAGE
-
 # Configure remote attestation and submit your SCONE policies.
 # Specify your SCONE CAS[1] address and MrEnclave.
 # In this example, we use a public CAS instance[2] for testing purposes.
@@ -245,38 +271,69 @@ docker push $SPARK_IMAGE
 # [2] https://sconedocs.github.io/public-CAS/
 export SCONE_CAS_ADDR="5-6-0.scone-cas.cf"
 export SCONE_CAS_MRENCLAVE="0902eec722b3de0d11b56aab3671cc8540e62bd2333427780c8a9cd855e4f298"
-
 # If running with Microsoft Azure Attestation policy, export the MAA provider URL.
-# NOTE: You need to edit "security.attestation" section of "policies/pyspark.hw.yaml.template" to enable MAA.
 # NOTE: MAA is not supported in simulated mode (i.e., on hardware without SGX support).
 export MAA_PROVIDER="https://sharedeus.eus.attest.azure.net"
+# Retrieve the Kubernetes master IP address to use in the spark-submit command.
+MASTER_ADDRESS=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
+# Path where kubeconfig is stored in your environment.
+export KUBECONFIG_DIR=/mnt/c/Users/your--username/.kube
+##################################################################################################
 
-# Attest SCONE CAS.
+# Login to Azure
+az login
+az account set --subscription "your--subscription--name"
+az acr login --name $ACR
+
+##################################################################################################
+# SCONE Image build and configuration
+##################################################################################################
+
+# Build the confidential Spark image - this also creates the "build" directory every run
+./build-spark-image.sh
+
+# Source the needed environment variables generated by the build script.
+# The directory "build" is created by the build script and stores build resources
+# for the encrypted Spark images (such as properties, SCONE policies and metadata).
+source build/env.sh
+
+# Push image to ACR so it is accessible from AKS
+docker push $SPARK_IMAGE
+
+# Attest SCONE CAS
 docker run --rm -t \
   -e SCONE_CLI_CONFIG=/cas/config.json \
-  -v $PWD/build/cas:/cas \
+  -v "$PWD"/build/cas:/cas \
   --entrypoint bash \
   $SPARK_IMAGE -c "scone cas attest $SCONE_CAS_ADDR $SCONE_CAS_MRENCLAVE -GCS --only_for_testing-debug --only_for_testing-ignore-signer"
+# You should see:
+# CAS 5-6-0.scone-cas.cf at https://5-6-0.scone-cas.cf:8081/ is trustworthy
 
 # Create your CAS namespace from the template and submit it.
 envsubst '$CAS_NAMESPACE' < policies/namespace.yaml.template > build/policies/namespace.yaml
+
 docker run --rm -t \
   -e SCONE_CLI_CONFIG=/cas/config.json \
-  -v $PWD/build/cas:/cas \
-  -v $PWD/build/policies:/policies \
+  -v "$PWD"/build/cas:/cas \
+  -v "$PWD"/build/policies:/policies \
   --entrypoint bash \
   $SPARK_IMAGE -c "scone session create /policies/namespace.yaml"
+# You should see a guid such as - b17f3edcdccf...
 
 # Create your SCONE policy for Spark drivers and executors from the template and submit it.
 # NOTE: If running in simulated mode (i.e., on hardware without SGX support), use "policies/pyspark.sim.yaml.template" instead.
+# This is not the case for us since we have an AKS nodepool - so use the following as is:
 envsubst '$SCONE_CAS_ADDR $CAS_NAMESPACE $PYSPARK_SESSION_NAME $DRIVER_MAIN_FSPF_KEY $DRIVER_MAIN_FSPF_TAG $DRIVER_VOLUME_FSPF_KEY $DRIVER_VOLUME_FSPF_TAG $DRIVER_JAVA_MRENCLAVE $DRIVER_PYTHON_MRENCLAVE $EXECUTOR_JAVA_MRENCLAVE' < policies/pyspark.hw.yaml.template > build/policies/pyspark.yaml
+
 docker run --rm -t \
   -e SCONE_CLI_CONFIG=/cas/config.json \
-  -v $PWD/build/cas:/cas \
-  -v $PWD/build/policies:/policies \
+  -v "$PWD"/build/cas:/cas \
+  -v "$PWD"/build/policies:/policies \
   --entrypoint bash \
   $SPARK_IMAGE -c "scone session create /policies/pyspark.yaml"
+# # You should see a guid such as - 7ac45aff0da0b...
 
+# Set from generated build variables
 export SCONE_CONFIG_ID="$CAS_NAMESPACE/$PYSPARK_SESSION_NAME/nyc-taxi-yellow"
 
 # Generate your Spark properties file from the template.
@@ -287,37 +344,57 @@ envsubst < properties.hw.template > build/properties
 # `spark.kubernetes.container.image.pullSecrets $SECRET_NAME` to properties file.
 echo 'spark.kubernetes.container.image.pullSecrets acrsecret' >> build/properties
 
-# Submit RBAC policies to your Kubernetes cluster, if not already.
-kubectl apply -f kubernetes/rbac.yaml
-
-# Retrieve the Kubernetes master IP address to use in the spark-submit command.
-MASTER_ADDRESS=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
-
 # Copy the pod template to provide SGX to Spark driver and executors.
 # NOTE: If running in simulated mode (i.e., on hardware without SGX support), use "kubernetes/sim-sgx-pod-template.yaml" instead.
 cp kubernetes/hw-sgx-pod-template.yaml build/kubernetes
 
-# Submit the Spark job with spark-submit. We use a vanilla Spark image (without SGX support) for simplicity.
-# Note that the submission step takes place on the local machine. The job to be executed on the remote cluster,
-# which is potentially untrusted, runs entirely inside of SGX enclaves.
-# We mount the Kubernetes credentials from our local environment into the Spark client container.
-# Path where kubeconfig is stored in your environment.
-export KUBECONFIG_DIR=/mnt/c/Users/your--username/.kube
-
-# Confirm values in the Spark properties file. You can customize parameters such as executor count.
+# Confirm values in the Spark properties file. You can customize parameters such as executor count etc before we spark-submit
 cat build/properties
 
-# Submit the job.
+##################################################################################################
+# Submit the Spark job with spark-submit
+################################################################################################## 
+# We use a vanilla Spark image (https://github.com/godatadriven-dockerhub/pyspark) to run spark-submit for simplicity.
+# This image runs on our local Docker Desktop to submit the Spark job - without SGX support
+# We mount the kubeconfig from our local machine into the Spark client container to connect to the K8s master node.
+
+# The submission step takes place on the local machine - untrusted
+# The analytics job to be executed on the remote cluster - attested, then trusted
+
+# Submit Spark job
 docker run -it --rm \
   -v $KUBECONFIG_DIR:/root/.kube \
-  -v $(pwd)/build:/build godatadriven/pyspark:3.1 --master k8s://$MASTER_ADDRESS --deploy-mode cluster --name nyc-taxi-yellow --properties-file /build/properties local:///fspf/encrypted-files/nyc-taxi-yellow.py
+  -v "$PWD"/build:/build godatadriven/pyspark:3.1 \
+  --master k8s://$MASTER_ADDRESS \
+  --deploy-mode cluster \
+  --name nyc-taxi-yellow \
+  --properties-file /build/properties local:///fspf/encrypted-files/nyc-taxi-yellow.py
 
+##################################################################################################
 # The driver pod will spawn the executor pod(s), and clean up after they're finished.
 # Once the job is finished, the driver pod will be kept in Completed state.
 
-# Spark logs will be displayed in the driver pod - follow by substituting the name of your driver pod:
+# Spark logs will be displayed in the driver pod - follow by substituting the name of your driver pod that gets generated
+##################################################################################################
+kubectl get pods -w
+
 kubectl logs nyc-taxi-yellow-...-driver --follow # Run this outside the container to see logs in real-time
 ```
+
+After running `spark-submit` - we see the following Pods:
+![Spark Pods](images/k8s-pods.png)
+
+And we follow the Driver Pod's logs to see the Spark Session get spun up:
+![Spark Session](images/Spark-Session.png)
+
+Counting 1.5 billion rows across 50 GB of partition Parquet files takes about ~131 seconds:\
+![Results from Distributed Calculation across 3 **Executors**](images/Spark-Results-1.png)
+
+Finally - we have our Always Encrypted `ContosoHR` database - accessing from SSMS here, where the columns are encrypted as expected:
+![Encrypted columns](images/encrypted-columns.png)
+
+And we see the decrypted columns inside the enclave in Spark:
+![Decrypted columns inside enclave](images/decrypted-columns.png)
 
 ### Benchmark
 

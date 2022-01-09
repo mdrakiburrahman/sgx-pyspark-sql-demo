@@ -2,7 +2,7 @@ FROM registry.scontain.com:5050/clenimar/pyspark:5.6.0plus
 
 USER root
 
-# Copy application code and libraries.
+# Copy libraries for runtime
 ADD input/libraries/* /spark/jars/
 
 ENV SCONE_HEAP=4G SCONE_FORK=0 SCONE_ALLOW_DLOPEN=1 SCONE_MPROTECT=1 SCONE_SYSLIBS=1 SCONE_LOG=ERROR

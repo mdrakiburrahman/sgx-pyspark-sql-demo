@@ -12,7 +12,7 @@ spark.kubernetes.driverEnv.SCONE_VERSION 1
 spark.kubernetes.driverEnv.SCONE_CAS_ADDR $SCONE_CAS_ADDR
 spark.kubernetes.driverEnv.SCONE_CONFIG_ID $SCONE_CONFIG_ID-driver-java
 spark.executor.instances 3
-spark.executor.memory 1G
+spark.executor.memory 5G
 spark.executor.memoryOverhead 4G
 spark.executorEnv.SCONE_MODE hw
 spark.executorEnv.SCONE_VERSION 1
