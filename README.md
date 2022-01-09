@@ -244,7 +244,7 @@ And a Confidential Node pool created:
 **Execute steps - bash**
 > ❗ The script below must run in a `bash` shell due to several dependencies on linux specific commands
 
-The following script deploys the Spark job. Prior to running the bash commands - please replace the following placeholders `<...>` in the JDBC string for the `ContosoHR` database in [`policies\pyspark.hw.yaml.template`](policies\pyspark.hw.yaml.template)
+The following script deploys the Spark job. Prior to running the bash commands - please replace the following placeholders `<...>` in the JDBC string for the `ContosoHR` database in [`policies/pyspark.hw.yaml.template`](policies/pyspark.hw.yaml.template)
 ```text
 jdbc:sqlserver://<your-azure-sql-server>.database.windows.net:1433;database=ContosoHR;user=<your-sql-auth-username>@<your-azure-sql-server>;password=<your-sql-auth-password>;columnEncryptionSetting=enabled;enclaveAttestationUrl=https://<your-attestation-url>.eus.attest.azure.net/attest/SgxEnclave;enclaveAttestationProtocol=AAS;keyVaultProviderClientId=<your-sp-clientid>;keyVaultProviderClientKey=<your--sp--clientkey>;
 ```
