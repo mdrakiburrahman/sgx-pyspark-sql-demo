@@ -4,6 +4,7 @@
 
 This repository demonstrates the following architecture for **Confidential Data Analytics** on Azure Intel SGX enabled Confidential Virtual machines (**AKS** or **Standalone**) for running containerized applications: <br>
 
+> [!NOTE]
 > 💡 Confidential data analytics in this context is meant to imply: **_"run analytics on PII data with peace of mind against data exfiltration"_** - this includes potential `root`-level access breach both internally (rogue admin) or externally (system compromise).
 > Confidential data analytics helps meet your high security and confidentiality needs by removing the untrusted parties from computation like cloud operator, service/guest admins. This execution helps meet your data compliance needs.
 
